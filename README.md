@@ -1,0 +1,68 @@
+# Dinner Planner: Road to Australia
+
+A 20-week dinner plan (Mon 2 Nov 2026 to Sun 21 Mar 2027) for three adults:
+
+- Every dinner is free of fish, shellfish and nuts, and under 1,000 kcal per person.
+- Each week has a rice dish, pasta dish, potato dish, veggie option, a Friday or Saturday fake-away, and 2 extras.
+- Monday, Tuesday and Wednesday (swimming and badminton nights) get quick dinners of 25 minutes or less.
+- Each week stays within £60 of estimated Tesco prices.
+- Recipes give gas mark temperatures, and many have a Ninja Dual Zone air fryer method.
+
+## Using the app
+
+- **Plan**: the 20 weeks as cards. Tap a card for the recipe, or **Replace** to swap in a favourite. The dialog shows the
+  new weekly cost. **Shuffle week** regenerates a whole week.
+- **Recipe page**: shopping list with Tesco links, method, Ninja method, photo upload, 5-star rating and favourite toggle.
+  Recipes rated 4 stars or more automatically become favourites.
+- **Shopping list** (per week): combined list grouped by aisle, with a separate cupboard check for staples. Ticks are
+  remembered on each phone.
+- **Prices**: Tesco has no public price feed, so prices are estimates. Edit any price and every budget recalculates.
+- **MyFitnessPal**: on a recipe, tap **Copy link**. In MyFitnessPal go to Recipes, then Create a Recipe, then Add from
+  web, paste the link, set servings to 3 and save. Each person logs 1 serving. **Copy nutrition** is there for Quick Add.
+  The `/share/recipe/...` pages are public (no passcode) so MyFitnessPal can read them.
+
+## Local development
+
+```bash
+npm install
+npm run dev            # http://localhost:3000
+```
+
+Without Supabase settings, data is stored in `.data/db.json` and photos in `.data/photos/`. Without
+`HOUSEHOLD_PASSCODE`, the login screen is skipped.
+
+Other scripts:
+
+```bash
+npm run validate                         # allergen, calorie and gas-oven checks on the recipe library
+npm run generate-plan -- --dry-run       # preview a fresh 20-week plan
+npm run generate-plan                    # rebuild all 20 weeks (replaces swaps)
+npm run generate-plan -- --week 5        # rebuild just week 5
+```
+
+The plan is generated automatically the first time the app loads.
+
+## Going live (Supabase + Vercel, both free tiers)
+
+1. **Supabase**: create a project at [supabase.com](https://supabase.com). Open SQL Editor, paste in
+   `supabase/schema.sql` and run it. This creates the tables and a public `photos` storage bucket.
+2. From Project Settings, then API, copy the **Project URL** and the **service_role** key.
+3. **Git remote**: push this repo to GitHub (or another git host).
+4. **Vercel**: import the repo at [vercel.com/new](https://vercel.com/new) and add these environment variables:
+   - `HOUSEHOLD_PASSCODE`: the passcode you'll all use
+   - `AUTH_SECRET`: a long random string (`openssl rand -hex 32`)
+   - `SUPABASE_URL`: the Project URL
+   - `SUPABASE_SERVICE_ROLE_KEY`: the service_role key (it stays on the server)
+5. Deploy, open the site on each phone, enter the passcode and use "Add to Home Screen".
+
+To copy local ratings or swaps to the live site, run `npm run generate-plan` with the Supabase variables in
+`.env.local`. Or just start fresh online, since the plan is generated on first load.
+
+## Where things live
+
+- `src/data/ingredients.ts`: Tesco packs, estimated prices and nutrition per ingredient
+- `src/data/recipes/*.ts`: recipes by category; `air-fryer.ts` has the Ninja Dual Zone methods
+- `src/lib/generator.ts`: the weekly planning rules
+- `src/lib/cost.ts`: budget maths (fresh items in whole packs, staples pro rata)
+- `src/lib/store/`: Supabase and local JSON storage
+- `src/proxy.ts`: passcode check (Next.js 16's replacement for middleware)

@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
-import type { MealSlot, Photo } from "@/lib/types";
+import type { Ingredient, MealSlot, Photo, Recipe } from "@/lib/types";
 import type { Store } from "./types";
 
 const BUCKET = "photos";
@@ -126,5 +126,28 @@ export const supabaseStore: Store = {
     } else {
       check(await db().from("price_overrides").upsert({ ingredient_id: ingredientId, price }));
     }
+  },
+
+  async getCustomRecipes() {
+    const rows = check(await db().from("custom_recipes").select("data").order("updated_at")) as { data: Recipe }[];
+    return rows.map((r) => r.data);
+  },
+  async saveCustomRecipe(recipe) {
+    check(
+      await db()
+        .from("custom_recipes")
+        .upsert({ slug: recipe.slug, data: recipe, updated_at: new Date().toISOString() }),
+    );
+  },
+  async deleteCustomRecipe(slug) {
+    check(await db().from("custom_recipes").delete().eq("slug", slug));
+  },
+
+  async getCustomIngredients() {
+    const rows = check(await db().from("custom_ingredients").select("data")) as { data: Ingredient }[];
+    return rows.map((r) => r.data);
+  },
+  async saveCustomIngredient(ingredient) {
+    check(await db().from("custom_ingredients").upsert({ id: ingredient.id, data: ingredient }));
   },
 };

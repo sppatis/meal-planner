@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { RECIPES_BY_SLUG } from "@/data/recipes";
 import { ACTIVITIES, DAY_NAMES, ROLE_LABELS } from "@/lib/constants";
 import { gbp, recipeCost, type PriceOverrides } from "@/lib/cost";
 import { dayIndex, formatDate } from "@/lib/dates";
 import { nutritionPerServing, totalMins } from "@/lib/nutrition";
-import type { MealSlot } from "@/lib/types";
+import type { IngredientMap, MealSlot, Recipe } from "@/lib/types";
 import { CATEGORY_STYLE } from "./category-style";
 import { RecipeArt } from "./recipe-art";
 import { StarDisplay } from "./stars";
@@ -12,6 +11,8 @@ import { SwapButton } from "./swap-button";
 
 interface Props {
   slot: MealSlot;
+  recipe: Recipe;
+  ingredients: IngredientMap;
   weekSlugs: string[];
   isToday: boolean;
   photo?: string;
@@ -21,11 +22,10 @@ interface Props {
   prices: PriceOverrides;
 }
 
-export function MealCard({ slot, weekSlugs, isToday, photo, rating, favourites, ratings, prices }: Props) {
-  const recipe = RECIPES_BY_SLUG[slot.recipeSlug];
+export function MealCard({ slot, recipe, ingredients, weekSlugs, isToday, photo, rating, favourites, ratings, prices }: Props) {
   const day = dayIndex(slot.date);
   const activity = ACTIVITIES[day];
-  const n = nutritionPerServing(recipe);
+  const n = nutritionPerServing(recipe, ingredients);
 
   return (
     <article
@@ -52,6 +52,9 @@ export function MealCard({ slot, weekSlugs, isToday, photo, rating, favourites, 
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${CATEGORY_STYLE[recipe.category].chip}`}>
               {ROLE_LABELS[slot.role]}
             </span>
+            {recipe.custom && (
+              <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[11px] font-semibold text-teal-800">Ours</span>
+            )}
             {recipe.airFryer && (
               <span className="rounded-full bg-stone-900 px-2 py-0.5 text-[11px] font-semibold text-white">Ninja</span>
             )}
@@ -73,7 +76,7 @@ export function MealCard({ slot, weekSlugs, isToday, photo, rating, favourites, 
             <div className="rounded-lg bg-stone-50 py-1">
               <dt className="sr-only">Cost</dt>
               <dd>
-                <b className="block text-sm text-stone-900">{gbp(recipeCost(recipe, prices))}</b>for 3
+                <b className="block text-sm text-stone-900">{gbp(recipeCost(recipe, prices, ingredients))}</b>for 3
               </dd>
             </div>
           </dl>

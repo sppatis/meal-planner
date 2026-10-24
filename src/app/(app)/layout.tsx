@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { LibraryProvider } from "@/components/library-provider";
+import { loadCustom } from "@/lib/data";
 import { storageMisconfigured } from "@/lib/store";
 
-export default function AppLayout({ children }: LayoutProps<"/">) {
+export default async function AppLayout({ children }: LayoutProps<"/">) {
+  const custom = await loadCustom();
   return (
-    <>
+    <LibraryProvider recipes={custom.recipes} ingredients={custom.ingredients}>
       <header className="no-print sticky top-0 z-20 border-b border-stone-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <Link href="/" className="leading-tight">
@@ -32,6 +35,6 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         </div>
       )}
       <div className="flex-1">{children}</div>
-    </>
+    </LibraryProvider>
   );
 }

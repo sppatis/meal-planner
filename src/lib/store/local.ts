@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import type { MealSlot, Photo } from "@/lib/types";
+import type { Ingredient, MealSlot, Photo, Recipe } from "@/lib/types";
 import type { Store } from "./types";
 
 interface LocalDb {
@@ -10,13 +10,23 @@ interface LocalDb {
   favourites: string[];
   photos: Photo[];
   prices: Record<string, number>;
+  customRecipes: Recipe[];
+  customIngredients: Ingredient[];
 }
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 export const LOCAL_PHOTO_DIR = path.join(DATA_DIR, "photos");
 
-const empty = (): LocalDb => ({ slots: [], ratings: {}, favourites: [], photos: [], prices: {} });
+const empty = (): LocalDb => ({
+  slots: [],
+  ratings: {},
+  favourites: [],
+  photos: [],
+  prices: {},
+  customRecipes: [],
+  customIngredients: [],
+});
 
 async function read(): Promise<LocalDb> {
   try {
@@ -112,6 +122,29 @@ export const localStore: Store = {
     await update((db) => {
       if (price === null) delete db.prices[ingredientId];
       else db.prices[ingredientId] = price;
+    });
+  },
+
+  async getCustomRecipes() {
+    return (await read()).customRecipes;
+  },
+  async saveCustomRecipe(recipe) {
+    await update((db) => {
+      db.customRecipes = [...db.customRecipes.filter((r) => r.slug !== recipe.slug), recipe];
+    });
+  },
+  async deleteCustomRecipe(slug) {
+    await update((db) => {
+      db.customRecipes = db.customRecipes.filter((r) => r.slug !== slug);
+    });
+  },
+
+  async getCustomIngredients() {
+    return (await read()).customIngredients;
+  },
+  async saveCustomIngredient(ingredient) {
+    await update((db) => {
+      db.customIngredients = [...db.customIngredients.filter((i) => i.id !== ingredient.id), ingredient];
     });
   },
 };

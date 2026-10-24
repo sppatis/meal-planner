@@ -2,12 +2,12 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { replaceSlot } from "@/app/actions";
-import { RECIPES, RECIPES_BY_SLUG } from "@/data/recipes";
 import { QUICK_MAX_MINS, ROLE_LABELS, WEEKLY_BUDGET } from "@/lib/constants";
 import { gbp, weekCost, type PriceOverrides } from "@/lib/cost";
 import { fitsSlot, isQuickNight } from "@/lib/generator";
 import { nutritionPerServing, totalMins } from "@/lib/nutrition";
 import type { SlotRole } from "@/lib/types";
+import { useLibrary } from "./library-provider";
 import { StarDisplay } from "./stars";
 
 interface Props {
@@ -28,19 +28,21 @@ export function SwapButton(props: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const { date, role, currentSlug, weekSlugs, favourites, ratings, prices } = props;
+  const library = useLibrary();
 
   const options = useMemo(() => {
-    const currentCost = weekCost(weekSlugs.map((s) => RECIPES_BY_SLUG[s]), prices);
+    const cost = (slugs: string[]) => weekCost(slugs.map((s) => library.bySlug[s]).filter(Boolean), prices, library.ingredients);
+    const currentCost = cost(weekSlugs);
     const fav = new Set(favourites);
     const inWeek = new Set(weekSlugs);
-    return RECIPES.filter((r) => fitsSlot(r, role, date) && !inWeek.has(r.slug))
+    return library.recipes.filter((r) => fitsSlot(r, role, date) && !inWeek.has(r.slug))
       .map((r) => {
         const newSlugs = weekSlugs.map((s) => (s === currentSlug ? r.slug : s));
-        const newCost = weekCost(newSlugs.map((s) => RECIPES_BY_SLUG[s]), prices);
+        const newCost = cost(newSlugs);
         return { recipe: r, favourite: fav.has(r.slug), newCost, delta: newCost - currentCost };
       })
       .sort((a, b) => (ratings[b.recipe.slug] ?? 0) - (ratings[a.recipe.slug] ?? 0) || a.delta - b.delta);
-  }, [date, role, currentSlug, weekSlugs, favourites, ratings, prices]);
+  }, [date, role, currentSlug, weekSlugs, favourites, ratings, prices, library]);
 
   const favouriteOptions = options.filter((o) => o.favourite);
   const shown = showAll ? options : favouriteOptions;
@@ -118,7 +120,7 @@ export function SwapButton(props: Props) {
           )}
           <ul className="space-y-1">
             {shown.map(({ recipe, favourite, newCost, delta }) => {
-              const n = nutritionPerServing(recipe);
+              const n = nutritionPerServing(recipe, library.ingredients);
               const over = newCost > WEEKLY_BUDGET;
               return (
                 <li key={recipe.slug}>
@@ -132,6 +134,11 @@ export function SwapButton(props: Props) {
                       <p className="font-medium">
                         {favourite && <span className="mr-1 text-rose-500">♥</span>}
                         {recipe.name}
+                        {recipe.custom && (
+                          <span className="ml-1.5 rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800">
+                            Ours
+                          </span>
+                        )}
                       </p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-stone-500">
                         <span>{n.kcal} kcal</span>

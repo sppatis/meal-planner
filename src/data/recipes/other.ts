@@ -58,14 +58,14 @@ export const OTHER = [
     ],
   }),
   r({
-    slug: "turkey-tacos",
-    name: "Turkey tacos in soft wraps",
-    protein: "turkey",
+    slug: "beef-tacos",
+    name: "Beef tacos in soft wraps",
+    protein: "beef",
     prep: 7,
     cook: 13,
-    description: "Lean spiced turkey mince with crunchy lettuce, salsa and cheese.",
+    description: "Lean spiced beef mince with crunchy lettuce, salsa and cheese.",
     ingredients: [
-      ["turkey-mince", 500],
+      ["beef-mince", 500],
       ["onion", 1, "finely chopped"],
       ["garlic", 2, "crushed"],
       ["smoked-paprika", 2],
@@ -84,7 +84,7 @@ export const OTHER = [
       "Fry the onion in a sprayed pan for 3 minutes. Add the mince and brown, breaking it up.",
       "Stir in the garlic, spices, purée and a splash of water and cook for 5 minutes.",
       "Mix the tomato with lime juice for a quick salsa. Warm the wraps.",
-      "Fill with turkey, lettuce, salsa, cheese and yogurt.",
+      "Fill with beef, lettuce, salsa, cheese and yogurt.",
     ],
   }),
   r({

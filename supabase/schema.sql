@@ -32,11 +32,25 @@ create table if not exists price_overrides (
   price numeric(6, 2) not null check (price >= 0)
 );
 
+-- Recipes and ingredients added in the app, stored in the same shape as the built-in ones.
+create table if not exists custom_recipes (
+  slug text primary key,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists custom_ingredients (
+  id text primary key,
+  data jsonb not null
+);
+
 alter table meal_slots enable row level security;
 alter table ratings enable row level security;
 alter table favourites enable row level security;
 alter table photos enable row level security;
 alter table price_overrides enable row level security;
+alter table custom_recipes enable row level security;
+alter table custom_ingredients enable row level security;
 
 -- Public bucket so photo URLs can be shown on the share pages.
 insert into storage.buckets (id, name, public)

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { RECIPES_BY_SLUG } from "@/data/recipes";
 import { BudgetBar } from "@/components/budget-bar";
 import { MealCard } from "@/components/meal-card";
 import { RegenerateWeekButton } from "@/components/regenerate-week-button";
@@ -12,16 +11,17 @@ import { nutritionPerServing } from "@/lib/nutrition";
 import { groupByWeek } from "@/lib/plan";
 
 export default async function PlanPage() {
-  const { slots, ratings, favourites, coverPhotos, prices } = await loadAppData();
-  const weeks = groupByWeek(slots);
+  const { library, slots, ratings, favourites, coverPhotos, prices } = await loadAppData();
+  const weeks = groupByWeek(slots, library);
   const today = todayISO();
   const currentWeek = weekOf(today);
   const daysToTrip = daysBetween(today, TRIP_DATE);
   const started = today >= PLAN_START;
 
-  const costs = weeks.map((w) => weekCost(w.map((s) => RECIPES_BY_SLUG[s.recipeSlug]), prices));
+  const costs = weeks.map((w) => weekCost(w.map((s) => library.bySlug[s.recipeSlug]), prices, library.ingredients));
   const avgKcal = Math.round(
-    slots.reduce((sum, s) => sum + nutritionPerServing(RECIPES_BY_SLUG[s.recipeSlug]).kcal, 0) / slots.length,
+    weeks.flat().reduce((sum, s) => sum + nutritionPerServing(library.bySlug[s.recipeSlug], library.ingredients).kcal, 0) /
+      weeks.flat().length,
   );
   const avgCost = costs.reduce((a, b) => a + b, 0) / costs.length;
 
@@ -105,6 +105,8 @@ export default async function PlanPage() {
                 <MealCard
                   key={slot.date}
                   slot={slot}
+                  recipe={library.bySlug[slot.recipeSlug]}
+                  ingredients={library.ingredients}
                   weekSlugs={weekSlugs}
                   isToday={slot.date === today}
                   photo={coverPhotos[slot.recipeSlug]}

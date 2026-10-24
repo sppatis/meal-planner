@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RECIPES_BY_SLUG } from "@/data/recipes";
 import { BudgetBar } from "@/components/budget-bar";
 import { Checklist } from "@/components/checklist";
 import { CopyButton } from "@/components/copy-button";
@@ -10,6 +9,7 @@ import { DAY_NAMES, PLAN_WEEKS } from "@/lib/constants";
 import { AISLE_ORDER, gbp, priceOf, shoppingList, tescoSearchUrl, type ShoppingLine } from "@/lib/cost";
 import { dayIndex, formatDate, weekDates } from "@/lib/dates";
 import { formatQty } from "@/lib/format";
+import { loadLibrary } from "@/lib/data";
 import { ensurePlan, groupByWeek } from "@/lib/plan";
 import { store } from "@/lib/store";
 
@@ -27,10 +27,11 @@ export default async function ShoppingPage({ params }: PageProps<"/week/[n]/shop
   const week = Number((await params).n) - 1;
   if (!(Number.isInteger(week) && week >= 0 && week < PLAN_WEEKS)) notFound();
 
-  const [slots, prices] = await Promise.all([ensurePlan(), store.getPriceOverrides()]);
-  const weekSlots = groupByWeek(slots)[week];
-  const recipes = weekSlots.map((s) => RECIPES_BY_SLUG[s.recipeSlug]);
-  const list = shoppingList(recipes, prices);
+  const library = await loadLibrary();
+  const [slots, prices] = await Promise.all([ensurePlan(library), store.getPriceOverrides()]);
+  const weekSlots = groupByWeek(slots, library)[week];
+  const recipes = weekSlots.map((s) => library.bySlug[s.recipeSlug]);
+  const list = shoppingList(recipes, prices, library.ingredients);
   const dates = weekDates(week);
 
   const fresh = list.lines.filter((l) => l.packs !== null);
@@ -95,7 +96,7 @@ export default async function ShoppingPage({ params }: PageProps<"/week/[n]/shop
             <li key={s.date}>
               <Link href={`/recipe/${s.recipeSlug}?date=${s.date}`} className="flex gap-2 hover:text-emerald-700">
                 <span className="w-24 shrink-0 text-stone-500">{DAY_NAMES[dayIndex(s.date)]}</span>
-                <span>{RECIPES_BY_SLUG[s.recipeSlug].name}</span>
+                <span>{library.bySlug[s.recipeSlug].name}</span>
               </Link>
             </li>
           ))}

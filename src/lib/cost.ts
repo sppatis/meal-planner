@@ -1,5 +1,5 @@
 import { INGREDIENTS } from "@/data/ingredients";
-import type { Aisle, Ingredient, Recipe } from "./types";
+import type { Aisle, Ingredient, IngredientMap, Recipe } from "./types";
 
 export type PriceOverrides = Record<string, number>;
 
@@ -8,10 +8,10 @@ export function priceOf(ing: Ingredient, overrides: PriceOverrides = {}) {
 }
 
 /** Share of pack prices actually used by one recipe (all 3 servings). */
-export function recipeCost(recipe: Recipe, overrides: PriceOverrides = {}) {
+export function recipeCost(recipe: Recipe, overrides: PriceOverrides = {}, ingredients: IngredientMap = INGREDIENTS) {
   let cost = 0;
   for (const line of recipe.ingredients) {
-    const ing = INGREDIENTS[line.id];
+    const ing = ingredients[line.id];
     if (ing) cost += (line.qty / ing.packSize) * priceOf(ing, overrides);
   }
   return cost;
@@ -37,7 +37,11 @@ export interface ShoppingList {
  * Fresh items are costed in whole packs. Cupboard staples (rice, pasta, spices, sauces)
  * last for weeks, so only the share used this week is counted.
  */
-export function shoppingList(recipes: Recipe[], overrides: PriceOverrides = {}): ShoppingList {
+export function shoppingList(
+  recipes: Recipe[],
+  overrides: PriceOverrides = {},
+  ingredients: IngredientMap = INGREDIENTS,
+): ShoppingList {
   const byId = new Map<string, { qty: number; usedIn: Set<string> }>();
   for (const recipe of recipes) {
     for (const line of recipe.ingredients) {
@@ -52,7 +56,7 @@ export function shoppingList(recipes: Recipe[], overrides: PriceOverrides = {}):
   let freshTotal = 0;
   let stapleTotal = 0;
   for (const [id, { qty, usedIn }] of byId) {
-    const ingredient = INGREDIENTS[id];
+    const ingredient = ingredients[id];
     if (!ingredient) continue;
     const price = priceOf(ingredient, overrides);
     if (ingredient.staple) {
@@ -69,8 +73,8 @@ export function shoppingList(recipes: Recipe[], overrides: PriceOverrides = {}):
   return { lines, freshTotal, stapleTotal, total: freshTotal + stapleTotal };
 }
 
-export function weekCost(recipes: Recipe[], overrides: PriceOverrides = {}) {
-  return shoppingList(recipes, overrides).total;
+export function weekCost(recipes: Recipe[], overrides: PriceOverrides = {}, ingredients: IngredientMap = INGREDIENTS) {
+  return shoppingList(recipes, overrides, ingredients).total;
 }
 
 export const AISLE_ORDER: Aisle[] = [

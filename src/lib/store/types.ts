@@ -1,4 +1,4 @@
-import type { MealSlot, Photo } from "@/lib/types";
+import type { Ingredient, MealSlot, Photo, Recipe } from "@/lib/types";
 
 export interface Store {
   getSlots(): Promise<MealSlot[]>;
@@ -18,4 +18,11 @@ export interface Store {
 
   getPriceOverrides(): Promise<Record<string, number>>;
   setPriceOverride(ingredientId: string, price: number | null): Promise<void>;
+
+  getCustomRecipes(): Promise<Recipe[]>;
+  saveCustomRecipe(recipe: Recipe): Promise<void>;
+  deleteCustomRecipe(slug: string): Promise<void>;
+
+  getCustomIngredients(): Promise<Ingredient[]>;
+  saveCustomIngredient(ingredient: Ingredient): Promise<void>;
 }

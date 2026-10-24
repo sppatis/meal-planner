@@ -14,6 +14,10 @@ A 20-week dinner plan (Mon 2 Nov 2026 to Sun 21 Mar 2027) for three adults:
   new weekly cost. **Shuffle week** regenerates a whole week.
 - **Recipe page**: shopping list with Tesco links, method, Ninja method, photo upload, 5-star rating and favourite toggle.
   Recipes rated 4 stars or more automatically become favourites.
+- **Our recipes**: on Recipes, tap **Add a recipe** to add your own. Pick ingredients from the Tesco catalogue (or add
+  a new one with its pack price and label nutrition) and the calories, cost, shopping list and MyFitnessPal page are
+  worked out the same way as the built-in recipes. Saving is blocked if it mentions fish or nuts or goes over 1,000 kcal.
+  Your recipes always appear as favourites in **Replace**, and can be edited or deleted from their page.
 - **Shopping list** (per week): combined list grouped by aisle, with a separate cupboard check for staples. Ticks are
   remembered on each phone.
 - **Prices**: Tesco has no public price feed, so prices are estimates. Edit any price and every budget recalculates.
@@ -61,7 +65,9 @@ To copy local ratings or swaps to the live site, run `npm run generate-plan` wit
 ## Where things live
 
 - `src/data/ingredients.ts`: Tesco packs, estimated prices and nutrition per ingredient
-- `src/data/recipes/*.ts`: recipes by category; `air-fryer.ts` has the Ninja Dual Zone methods
+- `src/data/recipes/*.ts`: recipes by category; `air-fryer.ts` has the Ninja Dual Zone methods; `index.ts` maps
+  removed recipes to their replacements so saved plans update themselves
+- `src/lib/library.ts`: combines the built-in recipes with your own
 - `src/lib/generator.ts`: the weekly planning rules
 - `src/lib/cost.ts`: budget maths (fresh items in whole packs, staples pro rata)
 - `src/lib/store/`: Supabase and local JSON storage

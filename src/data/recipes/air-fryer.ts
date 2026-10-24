@@ -110,6 +110,19 @@ export const AIR_FRYER: Record<string, string[]> = {
   "chicken-leek-bean-casserole": [
     "Bake the part-baked baguette in Zone 1: BAKE 180C for 6 minutes.",
   ],
+  "mexican-bean-jackets": [
+    "Microwave the pricked potatoes for 10-12 minutes while the beans simmer.",
+    "Split the potatoes between both zones, spray and salt. AIR FRY 200C for 8 minutes, press MATCH, then START, for crispy skins.",
+  ],
+  "sweet-chilli-halloumi-bowls": [
+    "Zone 1: halloumi cubes, lightly sprayed. AIR FRY 200C for 8 minutes.",
+    "Zone 2: peppers and broccoli, sprayed. AIR FRY 200C for 10 minutes.",
+    "Press SYNC and START, shaking both halfway. Toss everything in the sweet chilli, soy and lime.",
+  ],
+  "veg-feta-pasta-bake": [
+    "Split the courgette, peppers, onion and tomatoes between both zones, sprayed. ROAST 200C for 15 minutes, press MATCH, then START. Shake halfway.",
+    "Carry on with the pasta and bake as normal. Roasting the veg in the Ninja saves 20 minutes of oven time.",
+  ],
   "sweet-potato-chicken-hash": [
     "Zone 1: microwaved sweet potato cubes, pepper and onion with the spices and spray oil. AIR FRY 200C for 15 minutes.",
     "Zone 2: chicken pieces, sprayed. AIR FRY 200C for 12 minutes. Press SYNC and START, shaking both halfway.",

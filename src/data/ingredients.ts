@@ -42,7 +42,6 @@ const list: Ingredient[] = [
   ing("chicken-breast", "Chicken breast fillets", "g", 1000, 6.0, "1kg", MEAT, n(106, 24, 0, 1.1)),
   ing("chicken-thigh", "Skinless boneless chicken thigh fillets", "g", 1000, 4.75, "1kg", MEAT, n(145, 19, 0, 7.6)),
   ing("beef-mince", "5% fat beef mince", "g", 500, 3.25, "500g", MEAT, n(124, 21, 0, 4.5)),
-  ing("turkey-mince", "2% fat turkey breast mince", "g", 500, 3.25, "500g", MEAT, n(105, 23, 0, 1.5)),
   ing("pork-mince", "5% fat pork mince", "g", 500, 2.75, "500g", MEAT, n(128, 21, 0, 5)),
   ing("pork-loin", "Lean pork loin steaks", "g", 450, 3.6, "4 pack, 450g", MEAT, n(122, 22, 0, 4)),
   ing("beef-strips", "Lean beef stir-fry strips", "g", 400, 4.2, "400g", MEAT, n(120, 22, 0, 3.5)),

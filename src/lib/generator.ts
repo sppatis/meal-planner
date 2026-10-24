@@ -1,7 +1,7 @@
-import { RECIPES, RECIPES_BY_SLUG } from "@/data/recipes";
 import { ACTIVITIES, PLAN_WEEKS, WEEKLY_BUDGET } from "./constants";
 import { weekCost, type PriceOverrides } from "./cost";
 import { addDays, dayIndex, weekDates, weekOf } from "./dates";
+import { BUILTIN_LIBRARY, type Library } from "./library";
 import { isQuick } from "./nutrition";
 import type { Category, MealSlot, Recipe, SlotRole } from "./types";
 
@@ -67,6 +67,7 @@ interface GenerateOptions {
   prices?: PriceOverrides;
   seed?: number;
   budget?: number;
+  library?: Library;
 }
 
 export function generatePlan(opts: GenerateOptions = {}): MealSlot[] {
@@ -74,16 +75,17 @@ export function generatePlan(opts: GenerateOptions = {}): MealSlot[] {
   const regenerate = new Set(weeks);
   const budget = opts.budget ?? WEEKLY_BUDGET;
   const rng = mulberry32(opts.seed ?? 20261102);
+  const library = opts.library ?? BUILTIN_LIBRARY;
 
   const byDate = new Map<string, MealSlot>();
   for (const slot of opts.existing ?? []) {
     const w = weekOf(slot.date);
-    if (w !== null && !regenerate.has(w) && RECIPES_BY_SLUG[slot.recipeSlug]) byDate.set(slot.date, slot);
+    if (w !== null && !regenerate.has(w) && library.bySlug[slot.recipeSlug]) byDate.set(slot.date, slot);
   }
 
   const generated: MealSlot[] = [];
   for (const week of [...weeks].sort((a, b) => a - b)) {
-    const slots = generateWeek(week, byDate, opts.prices ?? {}, budget, rng);
+    const slots = generateWeek(week, byDate, opts.prices ?? {}, budget, rng, library);
     for (const s of slots) byDate.set(s.date, s);
     generated.push(...slots);
   }
@@ -105,6 +107,7 @@ function generateWeek(
   prices: PriceOverrides,
   budget: number,
   rng: Rng,
+  library: Library,
 ): MealSlot[] {
   const dates = weekDates(week);
   const before = byDate.get(addDays(dates[0], -1));
@@ -114,9 +117,13 @@ function generateWeek(
   for (const window of VARIETY_WINDOWS) {
     const recent = usedNear(week, window, byDate);
     for (let attempt = 0; attempt < ATTEMPTS_PER_WINDOW; attempt++) {
-      const slots = tryWeek(dates, recent, before, after, rng);
+      const slots = tryWeek(dates, recent, before, after, rng, library);
       if (!slots) continue;
-      const cost = weekCost(slots.map((s) => RECIPES_BY_SLUG[s.recipeSlug]), prices);
+      const cost = weekCost(
+        slots.map((s) => library.bySlug[s.recipeSlug]),
+        prices,
+        library.ingredients,
+      );
       if (cost <= budget) return slots;
       if (!cheapest || cost < cheapest.cost) cheapest = { slots, cost };
     }
@@ -131,21 +138,22 @@ function tryWeek(
   before: MealSlot | undefined,
   after: MealSlot | undefined,
   rng: Rng,
+  library: Library,
 ): MealSlot[] | null {
   const fakeawayDay = rng() < 0.5 ? 4 : 5;
   const roles = shuffle<SlotRole>(["rice", "pasta", "potato", "veggie", "extra", "extra"], rng);
   const used = new Set<string>();
   const perCategory = new Map<Category, number>();
   const slots: MealSlot[] = [];
-  let prev = before ? RECIPES_BY_SLUG[before.recipeSlug] : undefined;
+  let prev = before ? library.bySlug[before.recipeSlug] : undefined;
 
   for (let day = 0; day < 7; day++) {
     const date = dates[day];
     const role: SlotRole = day === fakeawayDay ? "fakeaway" : roles.shift()!;
     const quickNight = isQuickNight(date);
-    const next = day === 6 && after ? RECIPES_BY_SLUG[after.recipeSlug] : undefined;
+    const next = day === 6 && after ? library.bySlug[after.recipeSlug] : undefined;
 
-    const candidates = RECIPES.filter(
+    const candidates = library.recipes.filter(
       (r) =>
         fitsSlot(r, role, date) &&
         !used.has(r.slug) &&

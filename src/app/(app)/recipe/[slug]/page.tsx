@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RECIPES_BY_SLUG } from "@/data/recipes";
 import { CATEGORY_STYLE } from "@/components/category-style";
 import { Checklist } from "@/components/checklist";
+import { DeleteRecipeButton } from "@/components/delete-recipe-button";
 import { FavouriteButton } from "@/components/favourite-button";
 import { NutritionPanel } from "@/components/nutrition-panel";
 import { PhotoGallery } from "@/components/photo-gallery";
@@ -13,20 +13,22 @@ import { ACTIVITIES, CATEGORY_LABELS, DAY_NAMES, SERVINGS } from "@/lib/constant
 import { gbp, priceOf, recipeCost, tescoSearchUrl } from "@/lib/cost";
 import { dayIndex, formatDate, weekOf } from "@/lib/dates";
 import { EQUIPMENT_LABELS, equipmentFor } from "@/lib/equipment";
+import { loadLibrary } from "@/lib/data";
 import { isQuick, nutritionPerServing } from "@/lib/nutrition";
 import { nutritionText, recipeLines } from "@/lib/recipe-view";
 import { siteUrl } from "@/lib/site";
 import { store } from "@/lib/store";
 
 export async function generateMetadata({ params }: PageProps<"/recipe/[slug]">): Promise<Metadata> {
-  const recipe = RECIPES_BY_SLUG[(await params).slug];
+  const recipe = (await loadLibrary()).bySlug[(await params).slug];
   return { title: recipe?.name ?? "Recipe" };
 }
 
 export default async function RecipePage({ params, searchParams }: PageProps<"/recipe/[slug]">) {
   const { slug } = await params;
   const { date } = await searchParams;
-  const recipe = RECIPES_BY_SLUG[slug];
+  const library = await loadLibrary();
+  const recipe = library.bySlug[slug];
   if (!recipe) notFound();
 
   const [ratings, favourites, photos, prices, slots, base] = await Promise.all([
@@ -38,8 +40,8 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
     siteUrl(),
   ]);
 
-  const n = nutritionPerServing(recipe);
-  const lines = recipeLines(recipe);
+  const n = nutritionPerServing(recipe, library.ingredients);
+  const lines = recipeLines(recipe, library.ingredients);
   const planDate = typeof date === "string" && weekOf(date) !== null ? date : undefined;
   const backWeek = planDate ? weekOf(planDate)! + 1 : undefined;
   const scheduled = slots.filter((s) => s.recipeSlug === slug).map((s) => s.date);
@@ -63,6 +65,11 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           {isQuick(recipe) && (
             <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">Quick</span>
           )}
+          {recipe.custom && (
+            <span className="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
+              Our recipe
+            </span>
+          )}
           {planDate && (
             <span className="text-sm text-stone-500">
               {DAY_NAMES[dayIndex(planDate)]} {formatDate(planDate, { day: "numeric", month: "long" })}
@@ -80,9 +87,21 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
             Serves <b>{SERVINGS}</b>
           </span>
           <span>
-            About <b>{gbp(recipeCost(recipe, prices))}</b> for 3
+            About <b>{gbp(recipeCost(recipe, prices, library.ingredients))}</b> for 3
           </span>
-          <FavouriteButton recipeSlug={slug} favourite={favourites.includes(slug)} />
+          {recipe.custom ? (
+            <span className="flex items-center gap-2">
+              <Link
+                href={`/recipes/${slug}/edit`}
+                className="rounded-lg border border-stone-300 px-3 py-1.5 font-medium hover:border-emerald-600 hover:text-emerald-700"
+              >
+                Edit recipe
+              </Link>
+              <DeleteRecipeButton slug={slug} name={recipe.name} />
+            </span>
+          ) : (
+            <FavouriteButton recipeSlug={slug} favourite={favourites.includes(slug)} />
+          )}
         </div>
         <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Equipment">
           {equipment.map((e) => (
@@ -109,7 +128,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
             </p>
           </div>
           <NutritionPanel n={n} />
-          <ShareBox title={recipe.name} shareUrl={`${base}/share/recipe/${slug}`} nutritionText={nutritionText(recipe)} />
+          <ShareBox title={recipe.name} shareUrl={`${base}/share/recipe/${slug}`} nutritionText={nutritionText(recipe, library.ingredients)} />
           {scheduled.length > 0 && (
             <div className="rounded-2xl bg-white p-4 text-sm ring-1 ring-stone-200">
               <h2 className="font-semibold">On the plan</h2>

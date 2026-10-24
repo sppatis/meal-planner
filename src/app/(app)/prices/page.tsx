@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
-import { connection } from "next/server";
-import { INGREDIENT_LIST } from "@/data/ingredients";
 import { PriceInput } from "@/components/price-input";
 import { AISLE_ORDER, tescoSearchUrl } from "@/lib/cost";
+import { loadLibrary } from "@/lib/data";
 import { store } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Prices" };
 
 export default async function PricesPage() {
-  await connection();
-  const overrides = await store.getPriceOverrides();
+  const [library, overrides] = await Promise.all([loadLibrary(), store.getPriceOverrides()]);
+  const all = Object.values(library.ingredients);
   const groups = AISLE_ORDER.map((aisle) => ({
     aisle,
-    items: INGREDIENT_LIST.filter((i) => i.aisle === aisle).sort((a, b) => a.name.localeCompare(b.name)),
+    items: all.filter((i) => i.aisle === aisle).sort((a, b) => a.name.localeCompare(b.name)),
   }));
 
   return (
@@ -36,6 +35,7 @@ export default async function PricesPage() {
                   <p className="text-xs text-stone-500">
                     {i.packLabel}
                     {i.staple ? " · cupboard staple" : ""}
+                    {i.custom ? " · added by you" : ""}
                   </p>
                 </div>
                 <PriceInput id={i.id} defaultPrice={i.packPrice} override={overrides[i.id]} />

@@ -15,11 +15,11 @@ const values = (name: string) =>
   args.flatMap((a, i) => (a === `--${name}` && args[i + 1] ? args[i + 1].split(",") : []));
 
 async function main() {
-  const { RECIPES_BY_SLUG } = await import("../src/data/recipes");
   const { PLAN_WEEKS, WEEKLY_BUDGET } = await import("../src/lib/constants");
   const { weekCost } = await import("../src/lib/cost");
   const { formatDate, weekDates, weekOf } = await import("../src/lib/dates");
   const { generatePlan } = await import("../src/lib/generator");
+  const { buildLibrary } = await import("../src/lib/library");
   const { nutritionPerServing } = await import("../src/lib/nutrition");
   const { store, usingSupabase } = await import("../src/lib/store");
 
@@ -28,8 +28,14 @@ async function main() {
   const seedArg = values("seed")[0];
   const seed = seedArg ? Number(seedArg) : weeks.length ? Date.now() : undefined;
 
-  const [existing, prices] = await Promise.all([store.getSlots(), store.getPriceOverrides()]);
-  const plan = generatePlan({ weeks: weeks.length ? weeks : undefined, existing, prices, seed });
+  const [existing, prices, customRecipes, customIngredients] = await Promise.all([
+    store.getSlots(),
+    store.getPriceOverrides(),
+    store.getCustomRecipes(),
+    store.getCustomIngredients(),
+  ]);
+  const library = buildLibrary(customRecipes, customIngredients);
+  const plan = generatePlan({ weeks: weeks.length ? weeks : undefined, existing, prices, seed, library });
 
   const byWeek = new Map<number, typeof plan>();
   for (const s of plan) {
@@ -37,12 +43,12 @@ async function main() {
     byWeek.set(w, [...(byWeek.get(w) ?? []), s]);
   }
   for (const [w, slots] of [...byWeek].sort((a, b) => a[0] - b[0])) {
-    const recipes = slots.map((s) => RECIPES_BY_SLUG[s.recipeSlug]);
-    const cost = weekCost(recipes, prices);
+    const recipes = slots.map((s) => library.bySlug[s.recipeSlug]);
+    const cost = weekCost(recipes, prices, library.ingredients);
     console.log(`\nWeek ${w + 1} (${formatDate(slots[0].date)}): £${cost.toFixed(2)}${cost > WEEKLY_BUDGET ? "  OVER BUDGET" : ""}`);
     for (const s of slots) {
-      const r = RECIPES_BY_SLUG[s.recipeSlug];
-      console.log(`  ${formatDate(s.date, { weekday: "short" })}  ${s.role.padEnd(8)} ${String(nutritionPerServing(r).kcal).padStart(4)} kcal  ${r.name}`);
+      const r = library.bySlug[s.recipeSlug];
+      console.log(`  ${formatDate(s.date, { weekday: "short" })}  ${s.role.padEnd(8)} ${String(nutritionPerServing(r, library.ingredients).kcal).padStart(4)} kcal  ${r.name}`);
     }
   }
 

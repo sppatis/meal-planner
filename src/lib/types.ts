@@ -40,7 +40,11 @@ export interface Ingredient {
   allergens?: Allergen[];
   /** Brand-dependent risk that should be checked on the label. */
   checkLabel?: string;
+  /** Added by the household rather than built in. */
+  custom?: boolean;
 }
+
+export type IngredientMap = Record<string, Ingredient>;
 
 export type Category = "rice" | "pasta" | "potato" | "veggie" | "fakeaway" | "other";
 
@@ -74,6 +78,8 @@ export interface Recipe {
   tip?: string;
   /** Alternative steps for the Ninja Dual Zone air fryer. */
   airFryer?: string[];
+  /** Added by the household rather than built in. */
+  custom?: boolean;
 }
 
 export type Equipment = "hob" | "oven" | "microwave" | "airFryer";

@@ -1,16 +1,16 @@
 import { INGREDIENTS } from "@/data/ingredients";
 import { QUICK_MAX_MINS, SERVINGS } from "./constants";
-import type { Ingredient, Nutrition, Recipe } from "./types";
+import type { Ingredient, IngredientMap, Nutrition, Recipe } from "./types";
 
 function factor(ing: Ingredient, qty: number) {
   return ing.unit === "g" || ing.unit === "ml" ? qty / 100 : qty;
 }
 
 /** Nutrition for one of the 3 servings. */
-export function nutritionPerServing(recipe: Recipe): Nutrition {
+export function nutritionPerServing(recipe: Recipe, ingredients: IngredientMap = INGREDIENTS): Nutrition {
   const total: Nutrition = { kcal: 0, protein: 0, carbs: 0, fat: 0, fibre: 0 };
   for (const line of recipe.ingredients) {
-    const ing = INGREDIENTS[line.id];
+    const ing = ingredients[line.id];
     if (!ing) continue;
     const f = factor(ing, line.qty);
     total.kcal += ing.per.kcal * f;

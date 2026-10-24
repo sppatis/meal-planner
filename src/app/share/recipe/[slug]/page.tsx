@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { RECIPES_BY_SLUG } from "@/data/recipes";
 import { NutritionPanel } from "@/components/nutrition-panel";
 import { CATEGORY_LABELS, SERVINGS } from "@/lib/constants";
+import { loadLibrary } from "@/lib/data";
 import { nutritionPerServing } from "@/lib/nutrition";
 import { recipeLines } from "@/lib/recipe-view";
 import { siteUrl } from "@/lib/site";
 import { store } from "@/lib/store";
 
 export async function generateMetadata({ params }: PageProps<"/share/recipe/[slug]">): Promise<Metadata> {
-  const recipe = RECIPES_BY_SLUG[(await params).slug];
+  const recipe = (await loadLibrary()).bySlug[(await params).slug];
   if (!recipe) return {};
   return {
     title: recipe.name,
@@ -21,12 +21,13 @@ export async function generateMetadata({ params }: PageProps<"/share/recipe/[slu
 
 export default async function ShareRecipePage({ params }: PageProps<"/share/recipe/[slug]">) {
   const { slug } = await params;
-  const recipe = RECIPES_BY_SLUG[slug];
+  const library = await loadLibrary();
+  const recipe = library.bySlug[slug];
   if (!recipe) notFound();
 
   const [photos, ratings, base] = await Promise.all([store.getPhotos(slug), store.getRatings(), siteUrl()]);
-  const n = nutritionPerServing(recipe);
-  const lines = recipeLines(recipe);
+  const n = nutritionPerServing(recipe, library.ingredients);
+  const lines = recipeLines(recipe, library.ingredients);
   const photoUrls = photos.map((p) => (p.url.startsWith("http") ? p.url : `${base}${p.url}`));
 
   const jsonLd = {

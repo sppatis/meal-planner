@@ -13,7 +13,7 @@ import { ACTIVITIES, CATEGORY_LABELS, DAY_NAMES, SERVINGS } from "@/lib/constant
 import { gbp, priceOf, recipeCost, tescoSearchUrl } from "@/lib/cost";
 import { dayIndex, formatDate, weekOf } from "@/lib/dates";
 import { EQUIPMENT_LABELS, equipmentFor } from "@/lib/equipment";
-import { loadLibrary } from "@/lib/data";
+import { findPlan, loadLibrary, loadPlanList } from "@/lib/data";
 import { isQuick, nutritionPerServing } from "@/lib/nutrition";
 import { nutritionText, recipeLines } from "@/lib/recipe-view";
 import { siteUrl } from "@/lib/site";
@@ -26,8 +26,10 @@ export async function generateMetadata({ params }: PageProps<"/recipe/[slug]">):
 
 export default async function RecipePage({ params, searchParams }: PageProps<"/recipe/[slug]">) {
   const { slug } = await params;
-  const { date } = await searchParams;
+  const { date, plan: planParam } = await searchParams;
   const library = await loadLibrary();
+  const { active } = await loadPlanList();
+  const plan = (typeof planParam === "string" ? await findPlan(planParam) : undefined) ?? active;
   const recipe = library.bySlug[slug];
   if (!recipe) notFound();
 
@@ -36,14 +38,15 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
     store.getFavourites(),
     store.getPhotos(slug),
     store.getPriceOverrides(),
-    store.getSlots(),
+    store.getSlots(plan.id),
     siteUrl(),
   ]);
 
   const n = nutritionPerServing(recipe, library.ingredients);
   const lines = recipeLines(recipe, library.ingredients);
-  const planDate = typeof date === "string" && weekOf(date) !== null ? date : undefined;
-  const backWeek = planDate ? weekOf(planDate)! + 1 : undefined;
+  const planDate = typeof date === "string" && weekOf(plan, date) !== null ? date : undefined;
+  const backWeek = planDate ? weekOf(plan, planDate)! + 1 : undefined;
+  const planHref = plan.id === active.id ? "/" : `/plans/${plan.id}`;
   const scheduled = slots.filter((s) => s.recipeSlug === slug).map((s) => s.date);
   const activity = planDate ? ACTIVITIES[dayIndex(planDate)] : undefined;
   const equipment = equipmentFor(recipe);
@@ -51,7 +54,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16">
       <Link
-        href={backWeek ? `/#week-${backWeek}` : "/"}
+        href={backWeek ? `${planHref}#week-${backWeek}` : planHref}
         className="no-print mt-4 inline-block text-sm text-stone-500 hover:text-emerald-700"
       >
         ← Back to {backWeek ? `week ${backWeek}` : "the plan"}
@@ -131,12 +134,12 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           <ShareBox title={recipe.name} shareUrl={`${base}/share/recipe/${slug}`} nutritionText={nutritionText(recipe, library.ingredients)} />
           {scheduled.length > 0 && (
             <div className="rounded-2xl bg-white p-4 text-sm ring-1 ring-stone-200">
-              <h2 className="font-semibold">On the plan</h2>
+              <h2 className="font-semibold">On {plan.title}</h2>
               <ul className="mt-2 flex flex-wrap gap-2">
                 {scheduled.map((d) => (
                   <li key={d}>
                     <Link
-                      href={`/#week-${weekOf(d)! + 1}`}
+                      href={`${planHref}#week-${weekOf(plan, d)! + 1}`}
                       className="rounded-full bg-stone-100 px-2.5 py-1 text-xs hover:bg-emerald-50"
                     >
                       {formatDate(d, { weekday: "short", day: "numeric", month: "short" })}

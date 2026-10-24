@@ -1,6 +1,6 @@
-import { ACTIVITIES, PLAN_WEEKS, WEEKLY_BUDGET } from "./constants";
+import { ACTIVITIES } from "./constants";
 import { weekCost, type PriceOverrides } from "./cost";
-import { addDays, dayIndex, weekDates, weekOf } from "./dates";
+import { addDays, dayIndex, weekDates, weekOf, type PlanSpan } from "./dates";
 import { BUILTIN_LIBRARY, type Library } from "./library";
 import { isQuick } from "./nutrition";
 import type { Category, MealSlot, Recipe, SlotRole } from "./types";
@@ -59,77 +59,86 @@ function clashesProtein(a: Recipe | undefined, b: Recipe | undefined) {
   return !!a && !!b && a.protein === b.protein && MEAT_PROTEINS.has(a.protein);
 }
 
+export class PlanGenerationError extends Error {}
+
 interface GenerateOptions {
+  plan: PlanSpan & { weeklyBudget: number };
   /** Week indexes to (re)generate. Defaults to all weeks. */
   weeks?: number[];
   /** Existing slots; those outside `weeks` are kept and respected for variety. */
   existing?: MealSlot[];
   prices?: PriceOverrides;
   seed?: number;
-  budget?: number;
   library?: Library;
 }
 
-export function generatePlan(opts: GenerateOptions = {}): MealSlot[] {
-  const weeks = opts.weeks ?? Array.from({ length: PLAN_WEEKS }, (_, i) => i);
+export function generatePlan(opts: GenerateOptions): MealSlot[] {
+  const { plan } = opts;
+  const weeks = opts.weeks ?? Array.from({ length: plan.weeks }, (_, i) => i);
   const regenerate = new Set(weeks);
-  const budget = opts.budget ?? WEEKLY_BUDGET;
   const rng = mulberry32(opts.seed ?? 20261102);
   const library = opts.library ?? BUILTIN_LIBRARY;
+  const ctx: WeekContext = { plan, byDate: new Map(), prices: opts.prices ?? {}, rng, library };
+  const byDate = ctx.byDate;
 
-  const byDate = new Map<string, MealSlot>();
   for (const slot of opts.existing ?? []) {
-    const w = weekOf(slot.date);
+    const w = weekOf(plan, slot.date);
     if (w !== null && !regenerate.has(w) && library.bySlug[slot.recipeSlug]) byDate.set(slot.date, slot);
   }
 
   const generated: MealSlot[] = [];
   for (const week of [...weeks].sort((a, b) => a - b)) {
-    const slots = generateWeek(week, byDate, opts.prices ?? {}, budget, rng, library);
+    const slots = generateWeek(week, ctx);
     for (const s of slots) byDate.set(s.date, s);
     generated.push(...slots);
   }
   return generated;
 }
 
-function usedNear(week: number, window: number, byDate: Map<string, MealSlot>) {
+interface WeekContext {
+  plan: PlanSpan & { weeklyBudget: number };
+  byDate: Map<string, MealSlot>;
+  prices: PriceOverrides;
+  rng: Rng;
+  library: Library;
+}
+
+function usedNear(plan: PlanSpan, week: number, window: number, byDate: Map<string, MealSlot>) {
   const used = new Set<string>();
   for (const slot of byDate.values()) {
-    const w = weekOf(slot.date);
+    const w = weekOf(plan, slot.date);
     if (w !== null && w !== week && Math.abs(w - week) <= window) used.add(slot.recipeSlug);
   }
   return used;
 }
 
-function generateWeek(
-  week: number,
-  byDate: Map<string, MealSlot>,
-  prices: PriceOverrides,
-  budget: number,
-  rng: Rng,
-  library: Library,
-): MealSlot[] {
-  const dates = weekDates(week);
+function generateWeek(week: number, { plan, byDate, prices, rng, library }: WeekContext): MealSlot[] {
+  const dates = weekDates(plan, week);
   const before = byDate.get(addDays(dates[0], -1));
   const after = byDate.get(addDays(dates[6], 1));
   let cheapest: { slots: MealSlot[]; cost: number } | null = null;
 
-  for (const window of VARIETY_WINDOWS) {
-    const recent = usedNear(week, window, byDate);
+  // Last resort for heavily restricted plans: allow repeats from nearby weeks and more of one category.
+  const passes = [...VARIETY_WINDOWS.map((w) => ({ window: w, maxPerCategory: MAX_PER_CATEGORY })), { window: 0, maxPerCategory: 7 }];
+  for (const { window, maxPerCategory } of passes) {
+    if (cheapest && maxPerCategory !== MAX_PER_CATEGORY) break;
+    const recent = usedNear(plan, week, window, byDate);
     for (let attempt = 0; attempt < ATTEMPTS_PER_WINDOW; attempt++) {
-      const slots = tryWeek(dates, recent, before, after, rng, library);
+      const slots = tryWeek(dates, recent, before, after, rng, library, maxPerCategory);
       if (!slots) continue;
       const cost = weekCost(
         slots.map((s) => library.bySlug[s.recipeSlug]),
         prices,
         library.ingredients,
       );
-      if (cost <= budget) return slots;
+      if (cost <= plan.weeklyBudget) return slots;
       if (!cheapest || cost < cheapest.cost) cheapest = { slots, cost };
     }
   }
   if (cheapest) return cheapest.slots;
-  throw new Error(`Could not build a plan for week ${week + 1}`);
+  throw new PlanGenerationError(
+    `Couldn't fit 7 different dinners into week ${week + 1}. Try leaving out fewer ingredients.`,
+  );
 }
 
 function tryWeek(
@@ -139,9 +148,14 @@ function tryWeek(
   after: MealSlot | undefined,
   rng: Rng,
   library: Library,
+  maxPerCategory: number,
 ): MealSlot[] | null {
+  // Categories with no recipes left (e.g. everything with rice excluded) become "mix it up" nights.
+  const has = (c: Category) => library.recipes.some((r) => r.category === c);
   const fakeawayDay = rng() < 0.5 ? 4 : 5;
-  const roles = shuffle<SlotRole>(["rice", "pasta", "potato", "veggie", "extra", "extra"], rng);
+  const roles = shuffle<SlotRole>(["rice", "pasta", "potato", "veggie", "extra", "extra"], rng).map((r) =>
+    r === "extra" || has(r as Category) ? r : "extra",
+  );
   const used = new Set<string>();
   const perCategory = new Map<Category, number>();
   const slots: MealSlot[] = [];
@@ -149,7 +163,7 @@ function tryWeek(
 
   for (let day = 0; day < 7; day++) {
     const date = dates[day];
-    const role: SlotRole = day === fakeawayDay ? "fakeaway" : roles.shift()!;
+    const role: SlotRole = day === fakeawayDay ? (has("fakeaway") ? "fakeaway" : "extra") : roles.shift()!;
     const quickNight = isQuickNight(date);
     const next = day === 6 && after ? library.bySlug[after.recipeSlug] : undefined;
 
@@ -158,7 +172,7 @@ function tryWeek(
         fitsSlot(r, role, date) &&
         !used.has(r.slug) &&
         !recent.has(r.slug) &&
-        (perCategory.get(r.category) ?? 0) < MAX_PER_CATEGORY &&
+        (perCategory.get(r.category) ?? 0) < maxPerCategory &&
         !clashesProtein(prev, r) &&
         !clashesProtein(r, next),
     ).map((r) => ({

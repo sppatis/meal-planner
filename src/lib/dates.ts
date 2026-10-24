@@ -1,6 +1,10 @@
-import { PLAN_START, PLAN_WEEKS } from "./constants";
-
 const DAY_MS = 86_400_000;
+
+/** The parts of a plan that decide which dates it covers. */
+export interface PlanSpan {
+  startDate: string;
+  weeks: number;
+}
 
 export function parseISO(date: string) {
   const [y, m, d] = date.split("-").map(Number);
@@ -20,19 +24,33 @@ export function dayIndex(date: string) {
   return (parseISO(date).getUTCDay() + 6) % 7;
 }
 
-export function weekStart(week: number) {
-  return addDays(PLAN_START, week * 7);
+/** The Monday on or before `date`. */
+export function mondayOf(date: string) {
+  return addDays(date, -dayIndex(date));
 }
 
-export function weekDates(week: number) {
-  return Array.from({ length: 7 }, (_, i) => addDays(weekStart(week), i));
+export function weekStart(plan: PlanSpan, week: number) {
+  return addDays(plan.startDate, week * 7);
+}
+
+export function weekDates(plan: PlanSpan, week: number) {
+  return Array.from({ length: 7 }, (_, i) => addDays(weekStart(plan, week), i));
+}
+
+export function planDates(plan: PlanSpan) {
+  return Array.from({ length: plan.weeks }, (_, w) => weekDates(plan, w)).flat();
+}
+
+/** The day after the plan's last dinner. */
+export function planEnd(plan: PlanSpan) {
+  return addDays(plan.startDate, plan.weeks * 7);
 }
 
 /** Plan week index for a date, or null if outside the plan. */
-export function weekOf(date: string): number | null {
-  const diff = Math.floor((parseISO(date).getTime() - parseISO(PLAN_START).getTime()) / DAY_MS);
+export function weekOf(plan: PlanSpan, date: string): number | null {
+  const diff = Math.floor((parseISO(date).getTime() - parseISO(plan.startDate).getTime()) / DAY_MS);
   const week = Math.floor(diff / 7);
-  return week >= 0 && week < PLAN_WEEKS ? week : null;
+  return week >= 0 && week < plan.weeks ? week : null;
 }
 
 export function todayISO() {

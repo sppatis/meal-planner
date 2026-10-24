@@ -2,8 +2,9 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { replaceSlot } from "@/app/actions";
-import { QUICK_MAX_MINS, ROLE_LABELS, WEEKLY_BUDGET } from "@/lib/constants";
+import { QUICK_MAX_MINS, ROLE_LABELS } from "@/lib/constants";
 import { gbp, weekCost, type PriceOverrides } from "@/lib/cost";
+import { planLibrary } from "@/lib/exclusions";
 import { fitsSlot, isQuickNight } from "@/lib/generator";
 import { nutritionPerServing, totalMins } from "@/lib/nutrition";
 import type { SlotRole } from "@/lib/types";
@@ -11,6 +12,9 @@ import { useLibrary } from "./library-provider";
 import { StarDisplay } from "./stars";
 
 interface Props {
+  planId: string;
+  budget: number;
+  excluded: string[];
   date: string;
   dayLabel: string;
   role: SlotRole;
@@ -27,11 +31,13 @@ export function SwapButton(props: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const { date, role, currentSlug, weekSlugs, favourites, ratings, prices } = props;
-  const library = useLibrary();
+  const { planId, budget, excluded, date, role, currentSlug, weekSlugs, favourites, ratings, prices } = props;
+  const fullLibrary = useLibrary();
+  const library = useMemo(() => planLibrary(fullLibrary, { excluded }), [fullLibrary, excluded]);
 
   const options = useMemo(() => {
-    const cost = (slugs: string[]) => weekCost(slugs.map((s) => library.bySlug[s]).filter(Boolean), prices, library.ingredients);
+    const cost = (slugs: string[]) =>
+      weekCost(slugs.map((s) => fullLibrary.bySlug[s]).filter(Boolean), prices, library.ingredients);
     const currentCost = cost(weekSlugs);
     const fav = new Set(favourites);
     const inWeek = new Set(weekSlugs);
@@ -42,7 +48,7 @@ export function SwapButton(props: Props) {
         return { recipe: r, favourite: fav.has(r.slug), newCost, delta: newCost - currentCost };
       })
       .sort((a, b) => (ratings[b.recipe.slug] ?? 0) - (ratings[a.recipe.slug] ?? 0) || a.delta - b.delta);
-  }, [date, role, currentSlug, weekSlugs, favourites, ratings, prices, library]);
+  }, [date, role, currentSlug, weekSlugs, favourites, ratings, prices, library, fullLibrary]);
 
   const favouriteOptions = options.filter((o) => o.favourite);
   const shown = showAll ? options : favouriteOptions;
@@ -51,7 +57,7 @@ export function SwapButton(props: Props) {
     setError(null);
     startTransition(async () => {
       try {
-        await replaceSlot(date, slug);
+        await replaceSlot(planId, date, slug);
         dialog.current?.close();
       } catch {
         setError("Couldn't swap that meal. Please try again.");
@@ -121,7 +127,7 @@ export function SwapButton(props: Props) {
           <ul className="space-y-1">
             {shown.map(({ recipe, favourite, newCost, delta }) => {
               const n = nutritionPerServing(recipe, library.ingredients);
-              const over = newCost > WEEKLY_BUDGET;
+              const over = newCost > budget;
               return (
                 <li key={recipe.slug}>
                   <button

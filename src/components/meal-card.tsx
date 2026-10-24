@@ -3,13 +3,14 @@ import { ACTIVITIES, DAY_NAMES, ROLE_LABELS } from "@/lib/constants";
 import { gbp, recipeCost, type PriceOverrides } from "@/lib/cost";
 import { dayIndex, formatDate } from "@/lib/dates";
 import { nutritionPerServing, totalMins } from "@/lib/nutrition";
-import type { IngredientMap, MealSlot, Recipe } from "@/lib/types";
+import type { IngredientMap, MealSlot, Plan, Recipe } from "@/lib/types";
 import { CATEGORY_STYLE } from "./category-style";
 import { RecipeArt } from "./recipe-art";
 import { StarDisplay } from "./stars";
 import { SwapButton } from "./swap-button";
 
 interface Props {
+  plan: Plan;
   slot: MealSlot;
   recipe: Recipe;
   ingredients: IngredientMap;
@@ -22,7 +23,7 @@ interface Props {
   prices: PriceOverrides;
 }
 
-export function MealCard({ slot, recipe, ingredients, weekSlugs, isToday, photo, rating, favourites, ratings, prices }: Props) {
+export function MealCard({ plan, slot, recipe, ingredients, weekSlugs, isToday, photo, rating, favourites, ratings, prices }: Props) {
   const day = dayIndex(slot.date);
   const activity = ACTIVITIES[day];
   const n = nutritionPerServing(recipe, ingredients);
@@ -43,7 +44,7 @@ export function MealCard({ slot, recipe, ingredients, weekSlugs, isToday, photo,
       <p className={`mx-3 mt-1 min-h-5 text-[11px] font-medium ${activity ? "text-sky-700" : "text-transparent"}`}>
         {activity ? `Quick night · ${activity}` : "-"}
       </p>
-      <Link href={`/recipe/${recipe.slug}?date=${slot.date}`} className="mt-2 flex flex-1 flex-col">
+      <Link href={`/recipe/${recipe.slug}?plan=${plan.id}&date=${slot.date}`} className="mt-2 flex flex-1 flex-col">
         <div className="aspect-[5/2] overflow-hidden min-[480px]:aspect-[4/3]">
           <RecipeArt recipe={recipe} photo={photo} className="transition group-hover:scale-105" />
         </div>
@@ -85,6 +86,9 @@ export function MealCard({ slot, recipe, ingredients, weekSlugs, isToday, photo,
       <div className="flex items-center justify-between border-t border-stone-100 px-3 py-2">
         <StarDisplay value={rating} size="h-3.5 w-3.5" />
         <SwapButton
+          planId={plan.id}
+          budget={plan.weeklyBudget}
+          excluded={plan.excluded}
           date={slot.date}
           dayLabel={DAY_NAMES[day]}
           role={slot.role}

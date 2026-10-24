@@ -5,12 +5,12 @@ import { BudgetBar } from "@/components/budget-bar";
 import { Checklist } from "@/components/checklist";
 import { CopyButton } from "@/components/copy-button";
 import { PrintButton } from "@/components/print-button";
-import { DAY_NAMES, PLAN_WEEKS } from "@/lib/constants";
+import { DAY_NAMES } from "@/lib/constants";
 import { AISLE_ORDER, gbp, priceOf, shoppingList, tescoSearchUrl, type ShoppingLine } from "@/lib/cost";
 import { dayIndex, formatDate, weekDates } from "@/lib/dates";
 import { formatQty } from "@/lib/format";
-import { loadLibrary } from "@/lib/data";
-import { ensurePlan, groupByWeek } from "@/lib/plan";
+import { findPlan, loadLibrary, loadPlanList } from "@/lib/data";
+import { ensurePlanSlots, groupByWeek } from "@/lib/plan";
 import { store } from "@/lib/store";
 
 export async function generateMetadata({ params }: PageProps<"/week/[n]/shopping">): Promise<Metadata> {
@@ -23,16 +23,20 @@ function packText(line: ShoppingLine) {
   return `Buy ${line.packs} × ${line.ingredient.packLabel} · need ${need}`;
 }
 
-export default async function ShoppingPage({ params }: PageProps<"/week/[n]/shopping">) {
+export default async function ShoppingPage({ params, searchParams }: PageProps<"/week/[n]/shopping">) {
   const week = Number((await params).n) - 1;
-  if (!(Number.isInteger(week) && week >= 0 && week < PLAN_WEEKS)) notFound();
+  const { plan: planParam } = await searchParams;
+  const plan = await findPlan(typeof planParam === "string" ? planParam : undefined);
+  if (!plan || !(Number.isInteger(week) && week >= 0 && week < plan.weeks)) notFound();
+  const { active } = await loadPlanList();
+  const planHref = plan.id === active.id ? "/" : `/plans/${plan.id}`;
 
   const library = await loadLibrary();
-  const [slots, prices] = await Promise.all([ensurePlan(library), store.getPriceOverrides()]);
-  const weekSlots = groupByWeek(slots, library)[week];
+  const [slots, prices] = await Promise.all([ensurePlanSlots(plan, library), store.getPriceOverrides()]);
+  const weekSlots = groupByWeek(plan, slots, library)[week];
   const recipes = weekSlots.map((s) => library.bySlug[s.recipeSlug]);
   const list = shoppingList(recipes, prices, library.ingredients);
-  const dates = weekDates(week);
+  const dates = weekDates(plan, week);
 
   const fresh = list.lines.filter((l) => l.packs !== null);
   const staples = list.lines.filter((l) => l.packs === null);
@@ -64,17 +68,18 @@ export default async function ShoppingPage({ params }: PageProps<"/week/[n]/shop
 
   return (
     <main className="mx-auto max-w-3xl px-4 pb-16">
-      <Link href={`/#week-${week + 1}`} className="no-print mt-4 inline-block text-sm text-stone-500 hover:text-emerald-700">
+      <Link href={`${planHref}#week-${week + 1}`} className="no-print mt-4 inline-block text-sm text-stone-500 hover:text-emerald-700">
         ← Back to week {week + 1}
       </Link>
       <h1 className="mt-2 text-3xl font-bold">Week {week + 1} shopping list</h1>
       <p className="text-stone-500">
+        {plan.title} ·{" "}
         {formatDate(dates[0], { weekday: "long", day: "numeric", month: "long" })} to{" "}
         {formatDate(dates[6], { weekday: "long", day: "numeric", month: "long" })}
       </p>
 
       <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
-        <BudgetBar cost={list.total} />
+        <BudgetBar cost={list.total} budget={plan.weeklyBudget} />
         <p className="mt-2 text-xs text-stone-500">
           {gbp(list.freshTotal)} this week&apos;s shop plus {gbp(list.stapleTotal)} share of cupboard staples. Estimated Tesco prices,
           which you can adjust on the{" "}
@@ -94,7 +99,7 @@ export default async function ShoppingPage({ params }: PageProps<"/week/[n]/shop
         <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
           {weekSlots.map((s) => (
             <li key={s.date}>
-              <Link href={`/recipe/${s.recipeSlug}?date=${s.date}`} className="flex gap-2 hover:text-emerald-700">
+              <Link href={`/recipe/${s.recipeSlug}?plan=${plan.id}&date=${s.date}`} className="flex gap-2 hover:text-emerald-700">
                 <span className="w-24 shrink-0 text-stone-500">{DAY_NAMES[dayIndex(s.date)]}</span>
                 <span>{library.bySlug[s.recipeSlug].name}</span>
               </Link>

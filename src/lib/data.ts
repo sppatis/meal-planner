@@ -2,9 +2,9 @@ import "server-only";
 import { connection } from "next/server";
 import { cache } from "react";
 import { buildLibrary } from "./library";
-import { ensurePlan } from "./plan";
+import { ensurePlanSlots, loadPlans } from "./plan";
 import { store } from "./store";
-import type { Photo } from "./types";
+import type { Photo, Plan } from "./types";
 
 export const FAVOURITE_MIN_STARS = 4;
 
@@ -20,10 +20,23 @@ export const loadLibrary = cache(async () => {
   return buildLibrary(recipes, ingredients);
 });
 
-export async function loadAppData() {
+export const loadPlanList = cache(async () => {
+  await connection();
+  return loadPlans();
+});
+
+/** A plan by id, or the active plan when no id is given. */
+export async function findPlan(id?: string): Promise<Plan | undefined> {
+  const { plans, active } = await loadPlanList();
+  return id ? plans.find((p) => p.id === id) : active;
+}
+
+export async function loadAppData(plan?: Plan) {
   const library = await loadLibrary();
+  const { active } = await loadPlanList();
+  const current = plan ?? active;
   const [slots, ratings, manualFavourites, photos, prices] = await Promise.all([
-    ensurePlan(library),
+    ensurePlanSlots(current, library),
     store.getRatings(),
     store.getFavourites(),
     store.getPhotos(),
@@ -39,5 +52,15 @@ export async function loadAppData() {
   const coverPhotos: Record<string, string> = {};
   for (const p of photos as Photo[]) coverPhotos[p.recipeSlug] ??= p.url;
 
-  return { library, slots, ratings, manualFavourites, favourites: [...favourites], coverPhotos, prices };
+  return {
+    plan: current,
+    isActive: current.id === active.id,
+    library,
+    slots,
+    ratings,
+    manualFavourites,
+    favourites: [...favourites],
+    coverPhotos,
+    prices,
+  };
 }

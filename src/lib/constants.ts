@@ -1,11 +1,18 @@
 export const SERVINGS = 3;
 export const KCAL_CAP = 1000;
-export const WEEKLY_BUDGET = 60;
 export const QUICK_MAX_MINS = 25;
+export const DEFAULT_WEEKLY_BUDGET = 60;
+export const MAX_PLAN_WEEKS = 52;
 
-export const PLAN_START = "2026-11-02";
-export const PLAN_WEEKS = 20;
-export const TRIP_DATE = "2027-03-22";
+/** The household's first plan, created automatically if there are no plans yet. */
+export const DEFAULT_PLAN = {
+  id: "road-to-australia",
+  title: "Road to Australia",
+  startDate: "2026-11-02",
+  weeks: 20,
+  weeklyBudget: DEFAULT_WEEKLY_BUDGET,
+  excluded: [] as string[],
+};
 
 export const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 

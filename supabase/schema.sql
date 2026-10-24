@@ -2,10 +2,23 @@
 -- All access goes through the Next.js server using the service role key,
 -- so Row Level Security is enabled with no public policies.
 
+create table if not exists plans (
+  id text primary key,
+  data jsonb not null
+);
+
+-- Small key/value settings, e.g. which plan is active.
+create table if not exists settings (
+  key text primary key,
+  value jsonb not null
+);
+
 create table if not exists meal_slots (
-  date date primary key,
+  plan_id text not null references plans (id) on delete cascade,
+  date date not null,
   role text not null check (role in ('rice', 'pasta', 'potato', 'veggie', 'fakeaway', 'extra')),
-  recipe_slug text not null
+  recipe_slug text not null,
+  primary key (plan_id, date)
 );
 
 create table if not exists ratings (
@@ -44,6 +57,8 @@ create table if not exists custom_ingredients (
   data jsonb not null
 );
 
+alter table plans enable row level security;
+alter table settings enable row level security;
 alter table meal_slots enable row level security;
 alter table ratings enable row level security;
 alter table favourites enable row level security;

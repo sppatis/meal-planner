@@ -1,17 +1,24 @@
-# Dinner Planner: Road to Australia
+# Dinner Planner
 
-A 20-week dinner plan (Mon 2 Nov 2026 to Sun 21 Mar 2027) for three adults:
+Dinner plans for three adults. The first plan, **Road to Australia**, runs for 20 weeks (Mon 2 Nov 2026 to Sun 21 Mar
+2027), and you can add more.
 
 - Every dinner is free of fish, shellfish and nuts, and under 1,000 kcal per person.
 - Each week has a rice dish, pasta dish, potato dish, veggie option, a Friday or Saturday fake-away, and 2 extras.
 - Monday, Tuesday and Wednesday (swimming and badminton nights) get quick dinners of 25 minutes or less.
-- Each week stays within £60 of estimated Tesco prices.
+- Each week stays within the plan's budget (£60 by default) at estimated Tesco prices.
 - Recipes give gas mark temperatures, and many have a Ninja Dual Zone air fryer method.
 
 ## Using the app
 
-- **Plan**: the 20 weeks as cards. Tap a card for the recipe, or **Replace** to swap in a favourite. The dialog shows the
-  new weekly cost. **Shuffle week** regenerates a whole week.
+- **Plan** (homepage): the active plan's weeks as cards. Tap a card for the recipe, or **Replace** to swap in a
+  favourite. The dialog shows the new weekly cost. **Shuffle week** regenerates a whole week.
+- **Plans**: every plan with its dates, budget and left-out ingredients. **New plan** asks for a title, start date
+  (weeks run Monday to Sunday), number of weeks, weekly budget and any ingredients to leave out. Type an ingredient and
+  press Enter to add it; tap the × on its tag to remove it. The form shows which dinners will be left out before you
+  save, and every dinner is planned automatically. **Make active** puts a plan on the homepage. Other plans can be
+  viewed, edited or deleted. Changing a plan's dates re-plans it; changing the budget or ingredients only replaces the
+  dinners that no longer fit, unless you tick **Re-plan every dinner**.
 - **Recipe page**: shopping list with Tesco links, method, Ninja method, photo upload, 5-star rating and favourite toggle.
   Recipes rated 4 stars or more automatically become favourites.
 - **Our recipes**: on Recipes, tap **Add a recipe** to add your own. Pick ingredients from the Tesco catalogue (or add
@@ -38,18 +45,20 @@ Without Supabase settings, data is stored in `.data/db.json` and photos in `.dat
 Other scripts:
 
 ```bash
-npm run validate                         # allergen, calorie and gas-oven checks on the recipe library
-npm run generate-plan -- --dry-run       # preview a fresh 20-week plan
-npm run generate-plan                    # rebuild all 20 weeks (replaces swaps)
-npm run generate-plan -- --week 5        # rebuild just week 5
+npm run validate                           # allergen, calorie and gas-oven checks on the recipe library
+npm run generate-plan -- --dry-run         # preview a fresh plan for the active plan
+npm run generate-plan                      # rebuild every week of the active plan (replaces swaps)
+npm run generate-plan -- --week 5          # rebuild just week 5
+npm run generate-plan -- --plan my-plan-id # work on another plan
 ```
 
-The plan is generated automatically the first time the app loads.
+Road to Australia is created and planned automatically the first time the app loads.
 
 ## Going live (Supabase + Vercel, both free tiers)
 
 1. **Supabase**: create a project at [supabase.com](https://supabase.com). Open SQL Editor, paste in
-   `supabase/schema.sql` and run it. This creates the tables and a public `photos` storage bucket.
+   `supabase/schema.sql` and run it. This creates the tables (including `plans`, `settings` for the active plan, and
+   `meal_slots` keyed by plan and date) and a public `photos` storage bucket.
 2. From Project Settings, then API, copy the **Project URL** and the **service_role** key.
 3. **Git remote**: push this repo to GitHub (or another git host).
 4. **Vercel**: import the repo at [vercel.com/new](https://vercel.com/new) and add these environment variables:
@@ -68,6 +77,8 @@ To copy local ratings or swaps to the live site, run `npm run generate-plan` wit
 - `src/data/recipes/*.ts`: recipes by category; `air-fryer.ts` has the Ninja Dual Zone methods; `index.ts` maps
   removed recipes to their replacements so saved plans update themselves
 - `src/lib/library.ts`: combines the built-in recipes with your own
+- `src/lib/plan.ts`: creating, repairing and regenerating plans
+- `src/lib/exclusions.ts`: matching left-out ingredients against recipes
 - `src/lib/generator.ts`: the weekly planning rules
 - `src/lib/cost.ts`: budget maths (fresh items in whole packs, staples pro rata)
 - `src/lib/store/`: Supabase and local JSON storage

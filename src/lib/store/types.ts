@@ -1,10 +1,17 @@
-import type { Ingredient, MealSlot, Photo, Recipe } from "@/lib/types";
+import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
 
 export interface Store {
-  getSlots(): Promise<MealSlot[]>;
-  /** Replace all slots whose dates fall within `dates` with `slots`. */
-  replaceSlots(dates: string[], slots: MealSlot[]): Promise<void>;
-  setSlotRecipe(date: string, recipeSlug: string): Promise<void>;
+  getPlans(): Promise<Plan[]>;
+  savePlan(plan: Plan): Promise<void>;
+  /** Deletes the plan and its dinners. */
+  deletePlan(id: string): Promise<void>;
+  getActivePlanId(): Promise<string | null>;
+  setActivePlanId(id: string): Promise<void>;
+
+  getSlots(planId: string): Promise<MealSlot[]>;
+  /** Replace the plan's slots whose dates fall within `dates` with `slots`. */
+  replaceSlots(planId: string, dates: string[], slots: MealSlot[]): Promise<void>;
+  setSlotRecipe(planId: string, date: string, recipeSlug: string): Promise<void>;
 
   getRatings(): Promise<Record<string, number>>;
   setRating(recipeSlug: string, stars: number): Promise<void>;

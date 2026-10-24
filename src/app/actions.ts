@@ -2,14 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
-import { CATEGORY_LABELS, PLAN_WEEKS } from "@/lib/constants";
+import { CATEGORY_LABELS, MAX_PLAN_WEEKS } from "@/lib/constants";
 import { AISLE_ORDER } from "@/lib/cost";
-import { loadLibrary } from "@/lib/data";
-import { weekOf } from "@/lib/dates";
+import { findPlan, loadLibrary } from "@/lib/data";
+import { mondayOf, parseISO, planDates, weekOf } from "@/lib/dates";
+import { normaliseTerm } from "@/lib/exclusions";
+import { PlanGenerationError } from "@/lib/generator";
 import { buildLibrary, CUSTOM_PREFIX, slugify } from "@/lib/library";
-import { ensurePlan, regenerateWeeks } from "@/lib/plan";
+import { ensurePlanSlots, generateFullPlan, loadPlans, regenerateWeeks } from "@/lib/plan";
 import { store } from "@/lib/store";
-import type { Aisle, Category, Ingredient, Protein, Recipe, Unit } from "@/lib/types";
+import type { Aisle, Category, Ingredient, MealSlot, Plan, Protein, Recipe, Unit } from "@/lib/types";
 import { ingredientProblems, recipeProblems } from "@/lib/validate";
 
 function refreshAll() {
@@ -20,19 +22,125 @@ async function assertRecipe(slug: string) {
   if (!(await loadLibrary()).bySlug[slug]) throw new Error(`Unknown recipe ${slug}`);
 }
 
-export async function replaceSlot(date: string, recipeSlug: string) {
+async function requirePlan(planId: string) {
+  const plan = await findPlan(planId);
+  if (!plan) throw new Error("Unknown plan");
+  return plan;
+}
+
+export async function replaceSlot(planId: string, date: string, recipeSlug: string) {
   await requireAuth();
+  const plan = await requirePlan(planId);
   await assertRecipe(recipeSlug);
-  if (weekOf(date) === null) throw new Error("Date is outside the plan");
-  await store.setSlotRecipe(date, recipeSlug);
+  if (weekOf(plan, date) === null) throw new Error("Date is outside the plan");
+  await store.setSlotRecipe(plan.id, date, recipeSlug);
   refreshAll();
 }
 
-export async function regenerateWeek(week: number) {
+export async function regenerateWeek(planId: string, week: number) {
   await requireAuth();
-  if (!(Number.isInteger(week) && week >= 0 && week < PLAN_WEEKS)) throw new Error("Invalid week");
-  await regenerateWeeks([week], await loadLibrary());
+  const plan = await requirePlan(planId);
+  if (!(Number.isInteger(week) && week >= 0 && week < plan.weeks)) throw new Error("Invalid week");
+  await regenerateWeeks(plan, [week], await loadLibrary());
   refreshAll();
+}
+
+export async function setActivePlan(planId: string) {
+  await requireAuth();
+  await requirePlan(planId);
+  await store.setActivePlanId(planId);
+  refreshAll();
+}
+
+export async function deletePlan(planId: string) {
+  await requireAuth();
+  const { plans, active } = await loadPlans();
+  if (!plans.some((p) => p.id === planId)) throw new Error("Unknown plan");
+  if (active.id === planId) throw new Error("Make another plan active before deleting this one");
+  await store.deletePlan(planId);
+  refreshAll();
+}
+
+export interface PlanDraft {
+  /** Set when editing. */
+  id?: string;
+  title: string;
+  startDate: string;
+  weeks: number;
+  weeklyBudget: number;
+  excluded: string[];
+  makeActive: boolean;
+  /** Rebuild every dinner. Always happens for new plans or when the dates change. */
+  rebuild: boolean;
+}
+
+export type SavePlanResult = { ok: true; id: string; active: boolean } | { ok: false; errors: string[] };
+
+export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
+  await requireAuth();
+  const errors: string[] = [];
+  const { plans, active } = await loadPlans();
+  const existing = draft.id ? plans.find((p) => p.id === draft.id) : undefined;
+  if (draft.id && !existing) return { ok: false, errors: ["That plan no longer exists"] };
+
+  const title = text(draft.title, 60);
+  const startDate = typeof draft.startDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(draft.startDate) ? draft.startDate : "";
+  const weeks = Math.round(num(draft.weeks));
+  const weeklyBudget = Math.round(num(draft.weeklyBudget) * 100) / 100;
+  const excluded = [
+    ...new Map(
+      (Array.isArray(draft.excluded) ? draft.excluded : [])
+        .map((t) => text(t, 40))
+        .filter((t) => t.length >= 2)
+        .map((t) => [normaliseTerm(t), t] as const),
+    ).values(),
+  ].slice(0, 40);
+
+  if (title.length < 2) errors.push("Give the plan a title");
+  if (!startDate || Number.isNaN(parseISO(startDate).getTime())) errors.push("Choose a start date");
+  if (!(weeks >= 1 && weeks <= MAX_PLAN_WEEKS)) errors.push(`The plan can run for 1 to ${MAX_PLAN_WEEKS} weeks`);
+  if (!(weeklyBudget >= 10 && weeklyBudget <= 500)) errors.push("Set a weekly budget between £10 and £500");
+  if (errors.length) return { ok: false, errors };
+
+  let id = existing?.id;
+  if (!id) {
+    const base = slugify(title).slice(CUSTOM_PREFIX.length) || "plan";
+    id = base;
+    for (let i = 2; plans.some((p) => p.id === id); i++) id = `${base}-${i}`;
+  }
+  const plan: Plan = {
+    id,
+    title,
+    startDate: mondayOf(startDate),
+    weeks,
+    weeklyBudget,
+    excluded,
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
+  };
+
+  const library = await loadLibrary();
+  const rebuild = !existing || existing.startDate !== plan.startDate || existing.weeks !== plan.weeks || draft.rebuild;
+  let slots: MealSlot[] | null = null;
+  if (rebuild) {
+    try {
+      slots = await generateFullPlan(plan, library);
+    } catch (err) {
+      if (err instanceof PlanGenerationError) return { ok: false, errors: [err.message] };
+      throw err;
+    }
+  }
+  await store.savePlan(plan);
+  if (slots) {
+    const dates = new Set([...planDates(plan), ...(existing ? planDates(existing) : [])]);
+    await store.replaceSlots(plan.id, [...dates], slots);
+  } else {
+    // Keep the dinners and only swap out ones that are now excluded.
+    await ensurePlanSlots(plan, library);
+  }
+  const makeActive = draft.makeActive || active.id === plan.id;
+  if (makeActive) await store.setActivePlanId(plan.id);
+  refreshAll();
+  return { ok: true, id: plan.id, active: makeActive };
 }
 
 export async function setRating(recipeSlug: string, stars: number) {
@@ -211,7 +319,12 @@ export async function deleteRecipe(slug: string) {
   const library = await loadLibrary();
   if (!library.bySlug[slug]?.custom) throw new Error("Only your own recipes can be deleted");
   await store.deleteCustomRecipe(slug);
-  const [recipes, ingredients] = await Promise.all([store.getCustomRecipes(), store.getCustomIngredients()]);
-  await ensurePlan(buildLibrary(recipes, ingredients));
+  const [recipes, ingredients, { plans }] = await Promise.all([
+    store.getCustomRecipes(),
+    store.getCustomIngredients(),
+    loadPlans(),
+  ]);
+  const remaining = buildLibrary(recipes, ingredients);
+  for (const plan of plans) await ensurePlanSlots(plan, remaining);
   refreshAll();
 }

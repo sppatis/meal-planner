@@ -1,17 +1,16 @@
-import { WEEKLY_BUDGET } from "@/lib/constants";
 import { gbp } from "@/lib/cost";
 
-export function BudgetBar({ cost }: { cost: number }) {
-  const pct = Math.min(100, (cost / WEEKLY_BUDGET) * 100);
-  const over = cost > WEEKLY_BUDGET;
+export function BudgetBar({ cost, budget }: { cost: number; budget: number }) {
+  const pct = Math.min(100, (cost / budget) * 100);
+  const over = cost > budget;
   return (
     <div className="min-w-40 flex-1">
       <div className="flex justify-between text-xs font-medium">
         <span className={over ? "text-rose-700" : "text-stone-600"}>
-          {gbp(cost)} of {gbp(WEEKLY_BUDGET)}
+          {gbp(cost)} of {gbp(budget)}
         </span>
         <span className={over ? "text-rose-700" : "text-emerald-700"}>
-          {over ? `${gbp(cost - WEEKLY_BUDGET)} over` : `${gbp(WEEKLY_BUDGET - cost)} spare`}
+          {over ? `${gbp(cost - budget)} over` : `${gbp(budget - cost)} spare`}
         </span>
       </div>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-stone-200">

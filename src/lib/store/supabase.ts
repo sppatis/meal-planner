@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
-import type { Ingredient, MealSlot, Photo, Recipe } from "@/lib/types";
+import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
 import type { Store } from "./types";
 
 const BUCKET = "photos";
@@ -38,24 +38,48 @@ function toPhoto(row: PhotoRow): Photo {
 }
 
 export const supabaseStore: Store = {
-  async getSlots() {
+  async getPlans() {
+    const rows = check(await db().from("plans").select("data")) as { data: Plan }[];
+    return rows.map((r) => r.data).sort((a, b) => a.startDate.localeCompare(b.startDate));
+  },
+  async savePlan(plan) {
+    check(await db().from("plans").upsert({ id: plan.id, data: plan }));
+  },
+  async deletePlan(id) {
+    check(await db().from("meal_slots").delete().eq("plan_id", id));
+    check(await db().from("plans").delete().eq("id", id));
+    if ((await supabaseStore.getActivePlanId()) === id) check(await db().from("settings").delete().eq("key", "active_plan_id"));
+  },
+  async getActivePlanId() {
+    const row = check(await db().from("settings").select("value").eq("key", "active_plan_id").maybeSingle()) as {
+      value: string;
+    } | null;
+    return row?.value ?? null;
+  },
+  async setActivePlanId(id) {
+    check(await db().from("settings").upsert({ key: "active_plan_id", value: id }));
+  },
+
+  async getSlots(planId) {
     const rows = check(
-      await db().from("meal_slots").select("date, role, recipe_slug").order("date"),
+      await db().from("meal_slots").select("date, role, recipe_slug").eq("plan_id", planId).order("date"),
     ) as { date: string; role: MealSlot["role"]; recipe_slug: string }[];
     return rows.map((r) => ({ date: r.date, role: r.role, recipeSlug: r.recipe_slug }));
   },
-  async replaceSlots(dates, slots) {
-    if (dates.length) check(await db().from("meal_slots").delete().in("date", dates));
+  async replaceSlots(planId, dates, slots) {
+    if (dates.length) check(await db().from("meal_slots").delete().eq("plan_id", planId).in("date", dates));
     if (slots.length) {
       check(
         await db()
           .from("meal_slots")
-          .upsert(slots.map((s) => ({ date: s.date, role: s.role, recipe_slug: s.recipeSlug }))),
+          .upsert(slots.map((s) => ({ plan_id: planId, date: s.date, role: s.role, recipe_slug: s.recipeSlug }))),
       );
     }
   },
-  async setSlotRecipe(date, recipeSlug) {
-    check(await db().from("meal_slots").update({ recipe_slug: recipeSlug }).eq("date", date));
+  async setSlotRecipe(planId, date, recipeSlug) {
+    check(
+      await db().from("meal_slots").update({ recipe_slug: recipeSlug }).eq("plan_id", planId).eq("date", date),
+    );
   },
 
   async getRatings() {

@@ -87,6 +87,18 @@ export type Equipment = "hob" | "oven" | "microwave" | "airFryer";
 /** The role a slot fills in the weekly mix. */
 export type SlotRole = "rice" | "pasta" | "potato" | "veggie" | "fakeaway" | "extra";
 
+export interface Plan {
+  id: string;
+  title: string;
+  /** ISO date of the first Monday. */
+  startDate: string;
+  weeks: number;
+  weeklyBudget: number;
+  /** Words for ingredients to leave out, e.g. "mushroom". Matched against ingredient and recipe names. */
+  excluded: string[];
+  createdAt: string;
+}
+
 export interface MealSlot {
   /** ISO date YYYY-MM-DD */
   date: string;

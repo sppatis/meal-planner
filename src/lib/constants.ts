@@ -3,6 +3,8 @@ export const KCAL_CAP = 1000;
 export const QUICK_MAX_MINS = 25;
 export const DEFAULT_WEEKLY_BUDGET = 60;
 export const MAX_PLAN_WEEKS = 52;
+/** Monday to Wednesday, the household's busy evenings. */
+export const DEFAULT_QUICK_DAYS = [0, 1, 2];
 
 /** The household's first plan, created automatically if there are no plans yet. */
 export const DEFAULT_PLAN = {
@@ -12,16 +14,11 @@ export const DEFAULT_PLAN = {
   weeks: 20,
   weeklyBudget: DEFAULT_WEEKLY_BUDGET,
   excluded: [] as string[],
+  quickDays: DEFAULT_QUICK_DAYS,
 };
 
 export const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-/** Day index (0 = Monday) to the evening activity that makes it a quick-dinner night. */
-export const ACTIVITIES: Record<number, string> = {
-  0: "Swimming Club, poolside 19:00",
-  1: "Badminton, on court 19:00",
-  2: "Swimming Club, poolside 20:00",
-};
+export const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export const CATEGORY_LABELS = {
   rice: "Rice",

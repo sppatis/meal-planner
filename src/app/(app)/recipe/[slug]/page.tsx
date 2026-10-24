@@ -9,7 +9,7 @@ import { NutritionPanel } from "@/components/nutrition-panel";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { ShareBox } from "@/components/share-box";
 import { StarRating } from "@/components/stars";
-import { ACTIVITIES, CATEGORY_LABELS, DAY_NAMES, SERVINGS } from "@/lib/constants";
+import { CATEGORY_LABELS, DAY_NAMES, SERVINGS } from "@/lib/constants";
 import { gbp, priceOf, recipeCost, tescoSearchUrl } from "@/lib/cost";
 import { dayIndex, formatDate, weekOf } from "@/lib/dates";
 import { EQUIPMENT_LABELS, equipmentFor } from "@/lib/equipment";
@@ -48,7 +48,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const backWeek = planDate ? weekOf(plan, planDate)! + 1 : undefined;
   const planHref = plan.id === active.id ? "/" : `/plans/${plan.id}`;
   const scheduled = slots.filter((s) => s.recipeSlug === slug).map((s) => s.date);
-  const activity = planDate ? ACTIVITIES[dayIndex(planDate)] : undefined;
+  const quickNight = !!planDate && plan.quickDays.includes(dayIndex(planDate));
   const equipment = equipmentFor(recipe);
 
   return (
@@ -76,7 +76,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           {planDate && (
             <span className="text-sm text-stone-500">
               {DAY_NAMES[dayIndex(planDate)]} {formatDate(planDate, { day: "numeric", month: "long" })}
-              {activity ? ` · ${activity}` : ""}
+              {quickNight ? " · Quick night" : ""}
             </span>
           )}
         </div>

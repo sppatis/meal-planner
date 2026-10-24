@@ -96,6 +96,8 @@ export interface Plan {
   weeklyBudget: number;
   /** Words for ingredients to leave out, e.g. "mushroom". Matched against ingredient and recipe names. */
   excluded: string[];
+  /** Weekdays (0 = Monday) that need a quick dinner. */
+  quickDays: number[];
   createdAt: string;
 }
 

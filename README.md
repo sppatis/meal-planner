@@ -5,7 +5,7 @@ Dinner plans for three adults. The first plan, **Road to Australia**, runs for 2
 
 - Every dinner is free of fish, shellfish and nuts, and under 1,000 kcal per person.
 - Each week has a rice dish, pasta dish, potato dish, veggie option, a Friday or Saturday fake-away, and 2 extras.
-- Monday, Tuesday and Wednesday (swimming and badminton nights) get quick dinners of 25 minutes or less.
+- Each plan has its own quick nights (Monday to Wednesday by default), which get dinners ready in 25 minutes or less.
 - Each week stays within the plan's budget (£60 by default) at estimated Tesco prices.
 - Recipes give gas mark temperatures, and many have a Ninja Dual Zone air fryer method.
 
@@ -14,11 +14,11 @@ Dinner plans for three adults. The first plan, **Road to Australia**, runs for 2
 - **Plan** (homepage): the active plan's weeks as cards. Tap a card for the recipe, or **Replace** to swap in a
   favourite. The dialog shows the new weekly cost. **Shuffle week** regenerates a whole week.
 - **Plans**: every plan with its dates, budget and left-out ingredients. **New plan** asks for a title, start date
-  (weeks run Monday to Sunday), number of weeks, weekly budget and any ingredients to leave out. Type an ingredient and
-  press Enter to add it; tap the × on its tag to remove it. The form shows which dinners will be left out before you
+  (weeks run Monday to Sunday), number of weeks, weekly budget, quick nights and any ingredients to leave out. Tap the
+  days that need a quick dinner. Type an ingredient and press Enter to add it; tap the × on its tag to remove it. The form shows which dinners will be left out before you
   save, and every dinner is planned automatically. **Make active** puts a plan on the homepage. Other plans can be
-  viewed, edited or deleted. Changing a plan's dates re-plans it; changing the budget or ingredients only replaces the
-  dinners that no longer fit, unless you tick **Re-plan every dinner**.
+  viewed, edited or deleted. Changing a plan's dates re-plans it; changing the budget, quick nights or ingredients only
+  replaces the dinners that no longer fit, unless you tick **Re-plan every dinner**.
 - **Recipe page**: shopping list with Tesco links, method, Ninja method, photo upload, 5-star rating and favourite toggle.
   Recipes rated 4 stars or more automatically become favourites.
 - **Our recipes**: on Recipes, tap **Add a recipe** to add your own. Pick ingredients from the Tesco catalogue (or add

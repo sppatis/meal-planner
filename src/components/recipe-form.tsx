@@ -259,7 +259,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
           </div>
           <p className="text-xs text-stone-500">
             &quot;Mix it up&quot; dinners can go on any night. Recipes ready in {QUICK_MAX_MINS} minutes or less can be used on
-            swimming and badminton nights.
+            quick nights.
           </p>
         </section>
 

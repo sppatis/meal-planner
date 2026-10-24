@@ -12,8 +12,8 @@ export default function NewPlanPage() {
       </Link>
       <h1 className="mt-3 text-3xl font-bold">New plan</h1>
       <p className="mt-2 max-w-2xl text-stone-600">
-        Dinners are planned automatically for every week, with quick meals on swimming and badminton nights and a
-        fake-away on Friday or Saturday.
+        Dinners are planned automatically for every week, with quick meals on the nights you pick and a fake-away on
+        Friday or Saturday.
       </p>
       <PlanForm />
     </main>

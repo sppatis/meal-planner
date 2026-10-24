@@ -15,6 +15,7 @@ interface Props {
   planId: string;
   budget: number;
   excluded: string[];
+  quickDays: number[];
   date: string;
   dayLabel: string;
   role: SlotRole;
@@ -31,7 +32,7 @@ export function SwapButton(props: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const { planId, budget, excluded, date, role, currentSlug, weekSlugs, favourites, ratings, prices } = props;
+  const { planId, budget, excluded, quickDays, date, role, currentSlug, weekSlugs, favourites, ratings, prices } = props;
   const fullLibrary = useLibrary();
   const library = useMemo(() => planLibrary(fullLibrary, { excluded }), [fullLibrary, excluded]);
 
@@ -41,14 +42,14 @@ export function SwapButton(props: Props) {
     const currentCost = cost(weekSlugs);
     const fav = new Set(favourites);
     const inWeek = new Set(weekSlugs);
-    return library.recipes.filter((r) => fitsSlot(r, role, date) && !inWeek.has(r.slug))
+    return library.recipes.filter((r) => fitsSlot(r, role, date, quickDays) && !inWeek.has(r.slug))
       .map((r) => {
         const newSlugs = weekSlugs.map((s) => (s === currentSlug ? r.slug : s));
         const newCost = cost(newSlugs);
         return { recipe: r, favourite: fav.has(r.slug), newCost, delta: newCost - currentCost };
       })
       .sort((a, b) => (ratings[b.recipe.slug] ?? 0) - (ratings[a.recipe.slug] ?? 0) || a.delta - b.delta);
-  }, [date, role, currentSlug, weekSlugs, favourites, ratings, prices, library, fullLibrary]);
+  }, [date, quickDays, role, currentSlug, weekSlugs, favourites, ratings, prices, library, fullLibrary]);
 
   const favouriteOptions = options.filter((o) => o.favourite);
   const shown = showAll ? options : favouriteOptions;
@@ -88,7 +89,7 @@ export function SwapButton(props: Props) {
               <h2 className="text-lg font-semibold">Replace {props.dayLabel}&apos;s dinner</h2>
               <p className="mt-1 text-sm text-stone-600">
                 Showing {ROLE_LABELS[role].toLowerCase()} options
-                {isQuickNight(date) ? ` ready in ${QUICK_MAX_MINS} minutes or less` : ""}.
+                {isQuickNight(date, quickDays) ? ` ready in ${QUICK_MAX_MINS} minutes or less` : ""}.
               </p>
             </div>
             <button

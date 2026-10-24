@@ -4,9 +4,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useState, useTransition } from "react";
 import { savePlan, type PlanDraft } from "@/app/actions";
-import { CATEGORY_LABELS, DEFAULT_WEEKLY_BUDGET, MAX_PLAN_WEEKS } from "@/lib/constants";
-import { addDays, formatDate, mondayOf, todayISO } from "@/lib/dates";
+import {
+  CATEGORY_LABELS,
+  DAY_NAMES,
+  DAY_SHORT,
+  DEFAULT_QUICK_DAYS,
+  DEFAULT_WEEKLY_BUDGET,
+  MAX_PLAN_WEEKS,
+  QUICK_MAX_MINS,
+} from "@/lib/constants";
+import { addDays, formatDate, listDays, mondayOf, todayISO } from "@/lib/dates";
 import { excludedBy, normaliseTerm } from "@/lib/exclusions";
+import { isQuick } from "@/lib/nutrition";
 import type { Category, Plan } from "@/lib/types";
 import { useLibrary } from "./library-provider";
 
@@ -32,6 +41,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
   const [budget, setBudget] = useState(String(plan?.weeklyBudget ?? DEFAULT_WEEKLY_BUDGET));
   const [excluded, setExcluded] = useState<string[]>(plan?.excluded ?? []);
   const [term, setTerm] = useState("");
+  const [quickDays, setQuickDays] = useState<number[]>(plan?.quickDays ?? DEFAULT_QUICK_DAYS);
   const [makeActive, setMakeActive] = useState(!plan);
   const [rebuild, setRebuild] = useState(false);
 
@@ -55,6 +65,12 @@ export function PlanForm({ plan, isActive = false }: Props) {
     (c) =>
       library.recipes.some((r) => r.category === c) && !library.recipes.some((r) => r.category === c && !leftOut.some((x) => x.recipe === r)),
   );
+  const quickRecipes = library.recipes.filter((r) => isQuick(r) && !leftOut.some((x) => x.recipe === r));
+  const quickFakeaways = quickRecipes.filter((r) => r.category === "fakeaway").length;
+
+  function toggleDay(day: number) {
+    setQuickDays((days) => (days.includes(day) ? days.filter((d) => d !== day) : [...days, day].sort((a, b) => a - b)));
+  }
 
   function addTerm(raw: string) {
     const parts = raw.split(",").map((t) => t.trim()).filter((t) => t.length >= 2);
@@ -84,6 +100,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
       weeks: Number(weeks),
       weeklyBudget: Number(budget),
       excluded: pendingTerm ? [...excluded, pendingTerm.toLowerCase()] : excluded,
+      quickDays,
       makeActive,
       rebuild,
     };
@@ -179,6 +196,47 @@ export function PlanForm({ plan, isActive = false }: Props) {
           </p>
         )}
       </section>
+
+      <fieldset className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+        <legend className="float-left font-bold">Quick nights</legend>
+        <p className="clear-left pt-1 text-xs text-stone-500">
+          Pick the evenings you&apos;re short on time. Those nights get a dinner ready in {QUICK_MAX_MINS} minutes or
+          less.
+        </p>
+        <div className="mt-3 grid grid-cols-7 gap-1.5">
+          {DAY_SHORT.map((d, i) => {
+            const on = quickDays.includes(i);
+            return (
+              <button
+                key={d}
+                type="button"
+                aria-pressed={on}
+                aria-label={DAY_NAMES[i]}
+                onClick={() => toggleDay(i)}
+                className={`rounded-xl py-2.5 text-sm font-semibold ring-1 transition ${
+                  on
+                    ? "bg-sky-600 text-white ring-sky-600 hover:bg-sky-700"
+                    : "bg-white text-stone-600 ring-stone-300 hover:ring-sky-600"
+                }`}
+              >
+                {d}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-3 text-xs text-stone-600">
+          {quickDays.length
+            ? `Quick dinners on ${listDays(quickDays)}, chosen from ${quickRecipes.length} quick recipes.`
+            : "No quick nights: any dinner can go on any night."}
+        </p>
+        {quickDays.includes(4) && quickDays.includes(5) && (
+          <p className="mt-1 text-xs text-amber-700">
+            {quickFakeaways
+              ? `Friday and Saturday are both quick, and only ${quickFakeaways} fake-away${quickFakeaways === 1 ? " is" : "s are"} quick, so ${quickFakeaways === 1 ? "it" : "they"}'ll come round often.`
+              : "Friday and Saturday are both quick, and no fake-aways are quick, so that night will be a \"mix it up\" dinner."}
+          </p>
+        )}
+      </fieldset>
 
       <section className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
         <label className="font-bold" htmlFor="exclude">
@@ -281,8 +339,8 @@ export function PlanForm({ plan, isActive = false }: Props) {
                 Re-plan every dinner with these settings
               </label>
               <p className="mt-1 pl-6 text-xs text-stone-500">
-                Otherwise your current dinners are kept, and only ones using a left-out ingredient are swapped. Tick
-                this after changing the budget.
+                Otherwise your current dinners are kept, and only ones using a left-out ingredient or too slow for a
+                quick night are swapped. Tick this after changing the budget.
               </p>
             </>
           )}

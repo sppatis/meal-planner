@@ -69,6 +69,7 @@ export interface PlanDraft {
   weeks: number;
   weeklyBudget: number;
   excluded: string[];
+  quickDays: number[];
   makeActive: boolean;
   /** Rebuild every dinner. Always happens for new plans or when the dates change. */
   rebuild: boolean;
@@ -95,6 +96,9 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
         .map((t) => [normaliseTerm(t), t] as const),
     ).values(),
   ].slice(0, 40);
+  const quickDays = [
+    ...new Set((Array.isArray(draft.quickDays) ? draft.quickDays : []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)),
+  ].sort((a, b) => a - b);
 
   if (title.length < 2) errors.push("Give the plan a title");
   if (!startDate || Number.isNaN(parseISO(startDate).getTime())) errors.push("Choose a start date");
@@ -115,6 +119,7 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
     weeks,
     weeklyBudget,
     excluded,
+    quickDays,
     createdAt: existing?.createdAt ?? new Date().toISOString(),
   };
 
@@ -134,7 +139,7 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
     const dates = new Set([...planDates(plan), ...(existing ? planDates(existing) : [])]);
     await store.replaceSlots(plan.id, [...dates], slots);
   } else {
-    // Keep the dinners and only swap out ones that are now excluded.
+    // Keep the dinners and only swap out ones that are now excluded or too slow for a quick night.
     await ensurePlanSlots(plan, library);
   }
   const makeActive = draft.makeActive || active.id === plan.id;

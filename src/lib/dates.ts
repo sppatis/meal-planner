@@ -1,3 +1,5 @@
+import { DAY_SHORT } from "./constants";
+
 const DAY_MS = 86_400_000;
 
 /** The parts of a plan that decide which dates it covers. */
@@ -59,6 +61,12 @@ export function todayISO() {
 
 export function daysBetween(from: string, to: string) {
   return Math.round((parseISO(to).getTime() - parseISO(from).getTime()) / DAY_MS);
+}
+
+/** Day indexes as "Mon, Tue and Wed". */
+export function listDays(days: number[]) {
+  const names = [...days].sort((a, b) => a - b).map((d) => DAY_SHORT[d]);
+  return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : (names[0] ?? "");
 }
 
 export function formatDate(date: string, opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" }) {

@@ -1,5 +1,5 @@
 import { RETIRED_RECIPES } from "@/data/recipes";
-import { DEFAULT_PLAN } from "./constants";
+import { DEFAULT_PLAN, DEFAULT_QUICK_DAYS } from "./constants";
 import { weekCost } from "./cost";
 import { planDates, weekDates, weekOf } from "./dates";
 import { planLibrary } from "./exclusions";
@@ -11,7 +11,8 @@ import type { MealSlot, Plan, Recipe } from "./types";
 /** All plans plus the active one, creating the original plan the first time. */
 export async function loadPlans(): Promise<{ plans: Plan[]; active: Plan }> {
   const [stored, activeId] = await Promise.all([store.getPlans(), store.getActivePlanId()]);
-  let plans = stored;
+  // Plans saved before quick nights were configurable used Monday to Wednesday.
+  let plans = stored.map((p) => ({ ...p, quickDays: p.quickDays ?? DEFAULT_QUICK_DAYS }));
   if (!plans.length) {
     const first: Plan = { ...DEFAULT_PLAN, createdAt: new Date().toISOString() };
     await store.savePlan(first);
@@ -46,12 +47,16 @@ export async function ensurePlanSlots(plan: Plan, library: Library): Promise<Mea
 }
 
 /**
- * Points slots at a replacement when their recipe has been removed, deleted or excluded, preferring
- * the recipe's named successor and otherwise the least-planned recipe that fits the slot and budget.
+ * Points slots at a replacement when their recipe has been removed, deleted or excluded, or is too slow
+ * for a quick night, preferring the recipe's named successor and otherwise the least-planned recipe
+ * that fits the slot and budget.
  */
 async function repairSlots(plan: Plan, slots: MealSlot[], library: Library): Promise<MealSlot[]> {
-  const broken = slots.filter((s) => !library.bySlug[s.recipeSlug]);
-  if (!broken.length) return slots;
+  const fits = (s: MealSlot) => {
+    const r = library.bySlug[s.recipeSlug];
+    return !!r && fitsSlot(r, s.role, s.date, plan.quickDays);
+  };
+  if (slots.every(fits)) return slots;
 
   const prices = await store.getPriceOverrides();
   const budget = plan.weeklyBudget;
@@ -60,12 +65,12 @@ async function repairSlots(plan: Plan, slots: MealSlot[], library: Library): Pro
 
   const repaired = slots.map((s) => ({ ...s }));
   for (const slot of repaired) {
-    if (library.bySlug[slot.recipeSlug]) continue;
+    if (fits(slot)) continue;
     const week = weekOf(plan, slot.date);
     const weekSlots = repaired.filter((s) => weekOf(plan, s.date) === week);
     const inWeek = new Set(weekSlots.map((s) => s.recipeSlug));
     const usable = (r: Recipe | undefined): r is Recipe =>
-      !!r && fitsSlot(r, slot.role, slot.date) && !inWeek.has(r.slug);
+      !!r && fitsSlot(r, slot.role, slot.date, plan.quickDays) && !inWeek.has(r.slug);
     const costWith = (r: Recipe) =>
       weekCost(
         weekSlots.map((s) => (s === slot ? r : library.bySlug[s.recipeSlug])).filter(Boolean),

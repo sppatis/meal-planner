@@ -5,7 +5,7 @@ import { RegenerateWeekButton } from "@/components/regenerate-week-button";
 import { ScrollToWeek } from "@/components/scroll-to-week";
 import { KCAL_CAP } from "@/lib/constants";
 import { gbp, weekCost } from "@/lib/cost";
-import { daysBetween, formatDate, planEnd, todayISO, weekDates, weekOf } from "@/lib/dates";
+import { daysBetween, formatDate, listDays, planEnd, todayISO, weekDates, weekOf } from "@/lib/dates";
 import { loadAppData } from "@/lib/data";
 import { nutritionPerServing } from "@/lib/nutrition";
 import { groupByWeek } from "@/lib/plan";
@@ -64,6 +64,7 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
           <p className="mt-2 max-w-xl text-emerald-50/90">
             {plan.weeks} weeks of lighter dinners for three: no fish, no nuts, under {KCAL_CAP.toLocaleString()} kcal
             each, and {gbp(plan.weeklyBudget).replace(".00", "")} a week at Tesco.
+            {plan.quickDays.length > 0 && ` Quick dinners on ${listDays(plan.quickDays)}.`}
           </p>
           {plan.excluded.length > 0 && (
             <p className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">

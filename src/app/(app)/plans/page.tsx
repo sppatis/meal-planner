@@ -3,7 +3,7 @@ import Link from "next/link";
 import { DeletePlanButton } from "@/components/delete-plan-button";
 import { SetActivePlanButton } from "@/components/set-active-plan-button";
 import { gbp } from "@/lib/cost";
-import { addDays, formatDate, planEnd, todayISO } from "@/lib/dates";
+import { addDays, formatDate, listDays, planEnd, todayISO } from "@/lib/dates";
 import { loadPlanList } from "@/lib/data";
 import type { Plan } from "@/lib/types";
 
@@ -60,6 +60,9 @@ export default async function PlansPage() {
                   <p className="mt-1 text-sm text-stone-600">
                     {formatDate(plan.startDate, long)} to {formatDate(addDays(planEnd(plan), -1), long)} · {plan.weeks}{" "}
                     {plan.weeks === 1 ? "week" : "weeks"} · {gbp(plan.weeklyBudget)} a week
+                  </p>
+                  <p className="mt-1 text-sm text-stone-600">
+                    {plan.quickDays.length ? `Quick nights: ${listDays(plan.quickDays)}` : "No quick nights"}
                   </p>
                   {plan.excluded.length > 0 && (
                     <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">

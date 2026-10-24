@@ -1,9 +1,10 @@
-import { ACTIVITIES } from "./constants";
 import { weekCost, type PriceOverrides } from "./cost";
 import { addDays, dayIndex, weekDates, weekOf, type PlanSpan } from "./dates";
 import { BUILTIN_LIBRARY, type Library } from "./library";
 import { isQuick } from "./nutrition";
-import type { Category, MealSlot, Recipe, SlotRole } from "./types";
+import type { Category, MealSlot, Plan, Recipe, SlotRole } from "./types";
+
+type GeneratorPlan = PlanSpan & Pick<Plan, "weeklyBudget" | "quickDays">;
 
 /** Recipes can't come back within this many weeks either side. Relaxed if no plan fits. */
 const VARIETY_WINDOWS = [3, 2, 1];
@@ -11,8 +12,8 @@ const ATTEMPTS_PER_WINDOW = 400;
 const MAX_PER_CATEGORY = 2;
 const MEAT_PROTEINS = new Set(["chicken", "beef", "pork", "turkey", "lamb"]);
 
-export function isQuickNight(date: string) {
-  return dayIndex(date) in ACTIVITIES;
+export function isQuickNight(date: string, quickDays: number[]) {
+  return quickDays.includes(dayIndex(date));
 }
 
 function mulberry32(seed: number) {
@@ -48,8 +49,8 @@ function weightedPick<T>(items: { item: T; weight: number }[], rng: Rng): T | un
 }
 
 /** Recipes allowed in a slot, ignoring variety rules. Used by the generator and the swap dialog. */
-export function fitsSlot(recipe: Recipe, role: SlotRole, date: string) {
-  if (isQuickNight(date) && !isQuick(recipe)) return false;
+export function fitsSlot(recipe: Recipe, role: SlotRole, date: string, quickDays: number[]) {
+  if (isQuickNight(date, quickDays) && !isQuick(recipe)) return false;
   if (role === "fakeaway") return recipe.category === "fakeaway";
   if (role === "extra") return recipe.category !== "fakeaway";
   return recipe.category === (role as Category);
@@ -62,7 +63,7 @@ function clashesProtein(a: Recipe | undefined, b: Recipe | undefined) {
 export class PlanGenerationError extends Error {}
 
 interface GenerateOptions {
-  plan: PlanSpan & { weeklyBudget: number };
+  plan: GeneratorPlan;
   /** Week indexes to (re)generate. Defaults to all weeks. */
   weeks?: number[];
   /** Existing slots; those outside `weeks` are kept and respected for variety. */
@@ -96,7 +97,7 @@ export function generatePlan(opts: GenerateOptions): MealSlot[] {
 }
 
 interface WeekContext {
-  plan: PlanSpan & { weeklyBudget: number };
+  plan: GeneratorPlan;
   byDate: Map<string, MealSlot>;
   prices: PriceOverrides;
   rng: Rng;
@@ -124,7 +125,7 @@ function generateWeek(week: number, { plan, byDate, prices, rng, library }: Week
     if (cheapest && maxPerCategory !== MAX_PER_CATEGORY) break;
     const recent = usedNear(plan, week, window, byDate);
     for (let attempt = 0; attempt < ATTEMPTS_PER_WINDOW; attempt++) {
-      const slots = tryWeek(dates, recent, before, after, rng, library, maxPerCategory);
+      const slots = tryWeek(dates, plan.quickDays, recent, before, after, rng, library, maxPerCategory);
       if (!slots) continue;
       const cost = weekCost(
         slots.map((s) => library.bySlug[s.recipeSlug]),
@@ -137,12 +138,15 @@ function generateWeek(week: number, { plan, byDate, prices, rng, library }: Week
   }
   if (cheapest) return cheapest.slots;
   throw new PlanGenerationError(
-    `Couldn't fit 7 different dinners into week ${week + 1}. Try leaving out fewer ingredients.`,
+    `Couldn't fit 7 different dinners into week ${week + 1}. Try leaving out fewer ingredients${
+      plan.quickDays.length ? " or choosing fewer quick nights" : ""
+    }.`,
   );
 }
 
 function tryWeek(
   dates: string[],
+  quickDays: number[],
   recent: Set<string>,
   before: MealSlot | undefined,
   after: MealSlot | undefined,
@@ -152,7 +156,9 @@ function tryWeek(
 ): MealSlot[] | null {
   // Categories with no recipes left (e.g. everything with rice excluded) become "mix it up" nights.
   const has = (c: Category) => library.recipes.some((r) => r.category === c);
-  const fakeawayDay = rng() < 0.5 ? 4 : 5;
+  // Few fake-aways are quick, so put it on Friday or Saturday, whichever isn't a quick night.
+  const fakeawayDays = [4, 5].filter((d) => !quickDays.includes(d));
+  const fakeawayDay = fakeawayDays.length === 1 ? fakeawayDays[0] : rng() < 0.5 ? 4 : 5;
   const roles = shuffle<SlotRole>(["rice", "pasta", "potato", "veggie", "extra", "extra"], rng).map((r) =>
     r === "extra" || has(r as Category) ? r : "extra",
   );
@@ -163,13 +169,18 @@ function tryWeek(
 
   for (let day = 0; day < 7; day++) {
     const date = dates[day];
-    const role: SlotRole = day === fakeawayDay ? (has("fakeaway") ? "fakeaway" : "extra") : roles.shift()!;
-    const quickNight = isQuickNight(date);
+    const quickNight = isQuickNight(date, quickDays);
+    const role: SlotRole =
+      day !== fakeawayDay
+        ? roles.shift()!
+        : library.recipes.some((r) => r.category === "fakeaway" && (!quickNight || isQuick(r)))
+          ? "fakeaway"
+          : "extra";
     const next = day === 6 && after ? library.bySlug[after.recipeSlug] : undefined;
 
     const candidates = library.recipes.filter(
       (r) =>
-        fitsSlot(r, role, date) &&
+        fitsSlot(r, role, date, quickDays) &&
         !used.has(r.slug) &&
         !recent.has(r.slug) &&
         (perCategory.get(r.category) ?? 0) < maxPerCategory &&

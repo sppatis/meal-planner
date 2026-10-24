@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ACTIVITIES, DAY_NAMES, ROLE_LABELS } from "@/lib/constants";
+import { DAY_NAMES, QUICK_MAX_MINS, ROLE_LABELS } from "@/lib/constants";
 import { gbp, recipeCost, type PriceOverrides } from "@/lib/cost";
 import { dayIndex, formatDate } from "@/lib/dates";
 import { nutritionPerServing, totalMins } from "@/lib/nutrition";
@@ -25,7 +25,7 @@ interface Props {
 
 export function MealCard({ plan, slot, recipe, ingredients, weekSlugs, isToday, photo, rating, favourites, ratings, prices }: Props) {
   const day = dayIndex(slot.date);
-  const activity = ACTIVITIES[day];
+  const quickNight = plan.quickDays.includes(day);
   const n = nutritionPerServing(recipe, ingredients);
 
   return (
@@ -41,8 +41,8 @@ export function MealCard({ plan, slot, recipe, ingredients, weekSlugs, isToday, 
         </p>
         <p className="text-xs text-stone-500">{formatDate(slot.date)}</p>
       </div>
-      <p className={`mx-3 mt-1 min-h-5 text-[11px] font-medium ${activity ? "text-sky-700" : "text-transparent"}`}>
-        {activity ? `Quick night · ${activity}` : "-"}
+      <p className={`mx-3 mt-1 min-h-5 text-[11px] font-medium ${quickNight ? "text-sky-700" : "text-transparent"}`}>
+        {quickNight ? `Quick night · ${QUICK_MAX_MINS} min or less` : "-"}
       </p>
       <Link href={`/recipe/${recipe.slug}?plan=${plan.id}&date=${slot.date}`} className="mt-2 flex flex-1 flex-col">
         <div className="aspect-[5/2] overflow-hidden min-[480px]:aspect-[4/3]">
@@ -89,6 +89,7 @@ export function MealCard({ plan, slot, recipe, ingredients, weekSlugs, isToday, 
           planId={plan.id}
           budget={plan.weeklyBudget}
           excluded={plan.excluded}
+          quickDays={plan.quickDays}
           date={slot.date}
           dayLabel={DAY_NAMES[day]}
           role={slot.role}

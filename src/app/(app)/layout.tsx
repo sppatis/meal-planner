@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { logout } from "@/app/login/actions";
 import { LibraryProvider } from "@/components/library-provider";
+import { authRequired } from "@/lib/auth-token";
 import { loadCustom, loadPlanList } from "@/lib/data";
 import { storageMisconfigured } from "@/lib/store";
 
@@ -28,6 +30,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <Link href="/prices" className="rounded-lg px-3 py-2 hover:bg-stone-100">
               Prices
             </Link>
+            {authRequired() && (
+              <form action={logout}>
+                <button className="rounded-lg px-3 py-2 text-stone-500 hover:bg-stone-100 hover:text-stone-800">
+                  Sign out
+                </button>
+              </form>
+            )}
           </nav>
         </div>
       </header>

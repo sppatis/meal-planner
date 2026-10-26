@@ -8,6 +8,8 @@ export function LoginForm({ next }: { next: string }) {
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="next" value={next} />
+      {/* Lets password managers save the passcode against a fixed name. */}
+      <input type="text" name="username" value="household" autoComplete="username" readOnly hidden />
       <label className="block">
         <span className="text-sm font-medium text-stone-700">Household passcode</span>
         <input

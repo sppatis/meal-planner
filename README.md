@@ -40,7 +40,23 @@ npm run dev            # http://localhost:3000
 ```
 
 Without Supabase settings, data is stored in `.data/db.json` and photos in `.data/photos/`. Without
-`HOUSEHOLD_PASSCODE`, the login screen is skipped.
+`HOUSEHOLD_PASSCODE`, the login screen is skipped in development (never in production).
+
+## Signing in
+
+There's one shared household passcode and no accounts.
+
+- In production the site won't open at all until `HOUSEHOLD_PASSCODE` (at least 12 characters; a few random words
+  is easiest to type on a phone) and `AUTH_SECRET` (at least 32 random characters) are set. The login page says
+  which one is missing.
+- After 5 wrong passcodes a device is locked out for 15 minutes, and every wrong guess is slowed down.
+- Signing in lasts 90 days and renews while the device keeps using the site. **Sign out** is in the top bar.
+- To sign every device out (for example after a lost phone), change `HOUSEHOLD_PASSCODE` or `AUTH_SECRET` and restart.
+- Serve the site over HTTPS: the login cookie is only sent over secure connections in production.
+- The `/share/recipe/...` pages and recipe photos stay public so MyFitnessPal can read them. Photo addresses are
+  random and can't be guessed.
+- Behind nginx, pass the visitor's address with `proxy_set_header X-Real-IP $remote_addr;` so lockouts apply per
+  device rather than to everyone.
 
 Other scripts:
 
@@ -62,8 +78,8 @@ Road to Australia is created and planned automatically the first time the app lo
 2. From Project Settings, then API, copy the **Project URL** and the **service_role** key.
 3. **Git remote**: push this repo to GitHub (or another git host).
 4. **Vercel**: import the repo at [vercel.com/new](https://vercel.com/new) and add these environment variables:
-   - `HOUSEHOLD_PASSCODE`: the passcode you'll all use
-   - `AUTH_SECRET`: a long random string (`openssl rand -hex 32`)
+   - `HOUSEHOLD_PASSCODE`: the passcode you'll all use (at least 12 characters)
+   - `AUTH_SECRET`: a random string of at least 32 characters (`openssl rand -hex 32`)
    - `SUPABASE_URL`: the Project URL
    - `SUPABASE_SERVICE_ROLE_KEY`: the service_role key (it stays on the server)
 5. Deploy, open the site on each phone, enter the passcode and use "Add to Home Screen".
@@ -82,4 +98,5 @@ To copy local ratings or swaps to the live site, run `npm run generate-plan` wit
 - `src/lib/generator.ts`: the weekly planning rules
 - `src/lib/cost.ts`: budget maths (fresh items in whole packs, staples pro rata)
 - `src/lib/store/`: Supabase and local JSON storage
-- `src/proxy.ts`: passcode check (Next.js 16's replacement for middleware)
+- `src/proxy.ts`: passcode check on every page (Next.js 16's replacement for middleware)
+- `src/lib/auth-token.ts`: signed, expiring login cookie; `src/lib/login-limiter.ts`: wrong-passcode lockout

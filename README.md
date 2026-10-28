@@ -39,7 +39,7 @@ npm install
 npm run dev            # http://localhost:3000
 ```
 
-Without `DATABASE_URL` or Supabase settings, data is stored in `.data/db.json` and photos in `.data/photos/`. Without
+Without `DATABASE_URL`, data is stored in `.data/db.json` and photos in `.data/photos/`. Without
 `HOUSEHOLD_PASSCODE`, the login screen is skipped in development (never in production).
 
 ## Signing in
@@ -72,7 +72,7 @@ Road to Australia is created and planned automatically the first time the app lo
 
 ## Going live on your own server (PostgreSQL)
 
-Set `DATABASE_URL` and the app stores everything in PostgreSQL (it takes priority over Supabase). Photos are still
+Set `DATABASE_URL` and the app stores everything in PostgreSQL instead of `.data/db.json`. Photos are still
 files, saved in `.data/photos/` under the app folder, so that folder must be on a persistent volume.
 
 1. Create an empty database and a role that owns it. The app creates and upgrades its own tables on first use.
@@ -94,22 +94,10 @@ files, saved in `.data/photos/` under the app folder, so that folder must be on 
 
    Or skip the import: Road to Australia is planned automatically the first time the site loads.
 
-## Going live (Supabase + Vercel, both free tiers)
+5. Open the site on each phone, enter the passcode and use "Add to Home Screen".
 
-1. **Supabase**: create a project at [supabase.com](https://supabase.com). Open SQL Editor, paste in
-   `supabase/schema.sql` and run it. This creates the tables (including `plans`, `settings` for the active plan, and
-   `meal_slots` keyed by plan and date) and a public `photos` storage bucket.
-2. From Project Settings, then API, copy the **Project URL** and the **service_role** key.
-3. **Git remote**: push this repo to GitHub (or another git host).
-4. **Vercel**: import the repo at [vercel.com/new](https://vercel.com/new) and add these environment variables:
-   - `HOUSEHOLD_PASSCODE`: the passcode you'll all use (at least 12 characters)
-   - `AUTH_SECRET`: a random string of at least 32 characters (`openssl rand -hex 32`)
-   - `SUPABASE_URL`: the Project URL
-   - `SUPABASE_SERVICE_ROLE_KEY`: the service_role key (it stays on the server)
-5. Deploy, open the site on each phone, enter the passcode and use "Add to Home Screen".
-
-To copy local ratings or swaps to the live site, run `npm run generate-plan` with the Supabase variables in
-`.env.local`. Or just start fresh online, since the plan is generated on first load.
+The other scripts work against the live database the same way, e.g.
+`DATABASE_URL=... npm run generate-plan -- --week 5`.
 
 ## Where things live
 
@@ -121,6 +109,6 @@ To copy local ratings or swaps to the live site, run `npm run generate-plan` wit
 - `src/lib/exclusions.ts`: matching left-out ingredients against recipes
 - `src/lib/generator.ts`: the weekly planning rules
 - `src/lib/cost.ts`: budget maths (fresh items in whole packs, staples pro rata)
-- `src/lib/store/`: PostgreSQL, Supabase and local JSON storage; `postgres-migrations.ts` holds the database schema
+- `src/lib/store/`: PostgreSQL and local JSON storage; `postgres-migrations.ts` holds the database schema
 - `src/proxy.ts`: passcode check on every page (Next.js 16's replacement for middleware)
 - `src/lib/auth-token.ts`: signed, expiring login cookie; `src/lib/login-limiter.ts`: wrong-passcode lockout

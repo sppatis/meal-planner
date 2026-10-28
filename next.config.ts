@@ -23,9 +23,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  images: {
-    remotePatterns: [{ protocol: "https", hostname: "*.supabase.co" }],
-  },
   turbopack: {
     rules: {
       "*.css": {

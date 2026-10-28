@@ -3,7 +3,6 @@ import { logout } from "@/app/login/actions";
 import { LibraryProvider } from "@/components/library-provider";
 import { authRequired } from "@/lib/auth-token";
 import { loadCustom, loadPlanList } from "@/lib/data";
-import { storageMisconfigured } from "@/lib/store";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const [custom, { active }] = await Promise.all([loadCustom(), loadPlanList()]);
@@ -40,12 +39,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </nav>
         </div>
       </header>
-      {storageMisconfigured && (
-        <div className="bg-rose-600 px-4 py-2 text-center text-sm text-white">
-          Supabase isn&apos;t configured, so changes won&apos;t be saved. Set SUPABASE_URL and
-          SUPABASE_SERVICE_ROLE_KEY in Vercel.
-        </div>
-      )}
       <div className="flex-1">{children}</div>
     </LibraryProvider>
   );

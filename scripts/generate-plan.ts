@@ -23,7 +23,7 @@ async function main() {
   const { generatePlan } = await import("../src/lib/generator");
   const { buildLibrary } = await import("../src/lib/library");
   const { nutritionPerServing } = await import("../src/lib/nutrition");
-  const { store, usingSupabase } = await import("../src/lib/store");
+  const { store, storeName } = await import("../src/lib/store");
 
   const { plans, active } = await loadPlans();
   const planId = values("plan")[0];
@@ -72,10 +72,13 @@ async function main() {
     weekDates(plan, w),
   );
   await store.replaceSlots(plan.id, dates, slotsOut);
-  console.log(`\nSaved ${slotsOut.length} dinners to ${usingSupabase ? "Supabase" : ".data/db.json"}.`);
+  console.log(`\nSaved ${slotsOut.length} dinners to ${storeName}.`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main().then(
+  () => process.exit(0),
+  (err) => {
+    console.error(err);
+    process.exit(1);
+  },
+);

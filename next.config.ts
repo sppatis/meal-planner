@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     },
   },
   poweredByHeader: false,
+  serverExternalPackages: ["postgres"],
   async headers() {
     return [
       {

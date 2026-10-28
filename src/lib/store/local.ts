@@ -3,11 +3,12 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { DEFAULT_PLAN } from "@/lib/constants";
 import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
+import { photoUrl, removePhotoFile, savePhotoFile } from "./photo-files";
 import type { Store } from "./types";
 
 type StoredSlot = MealSlot & { planId: string };
 
-interface LocalDb {
+export interface LocalDb {
   plans: Plan[];
   activePlanId: string | null;
   slots: StoredSlot[];
@@ -21,7 +22,6 @@ interface LocalDb {
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
-export const LOCAL_PHOTO_DIR = path.join(DATA_DIR, "photos");
 
 const empty = (): LocalDb => ({
   plans: [],
@@ -142,15 +142,11 @@ export const localStore: Store = {
     );
   },
   async addPhoto(recipeSlug, file) {
-    const id = randomUUID();
-    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-    const fileName = `${id}.${ext}`;
-    await fs.mkdir(LOCAL_PHOTO_DIR, { recursive: true });
-    await fs.writeFile(path.join(LOCAL_PHOTO_DIR, fileName), Buffer.from(await file.arrayBuffer()));
+    const { id, fileName } = await savePhotoFile(file);
     const photo: Photo = {
       id,
       recipeSlug,
-      url: `/api/photos/${fileName}`,
+      url: photoUrl(fileName),
       createdAt: new Date().toISOString(),
     };
     await update((db) => {
@@ -161,7 +157,7 @@ export const localStore: Store = {
   async deletePhoto(id) {
     const photo = (await read()).photos.find((p) => p.id === id);
     if (!photo) return;
-    await fs.rm(path.join(LOCAL_PHOTO_DIR, path.basename(photo.url)), { force: true });
+    await removePhotoFile(photo.url);
     await update((db) => {
       db.photos = db.photos.filter((p) => p.id !== id);
     });

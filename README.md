@@ -39,7 +39,7 @@ npm install
 npm run dev            # http://localhost:3000
 ```
 
-Without Supabase settings, data is stored in `.data/db.json` and photos in `.data/photos/`. Without
+Without `DATABASE_URL` or Supabase settings, data is stored in `.data/db.json` and photos in `.data/photos/`. Without
 `HOUSEHOLD_PASSCODE`, the login screen is skipped in development (never in production).
 
 ## Signing in
@@ -70,6 +70,30 @@ npm run generate-plan -- --plan my-plan-id # work on another plan
 
 Road to Australia is created and planned automatically the first time the app loads.
 
+## Going live on your own server (PostgreSQL)
+
+Set `DATABASE_URL` and the app stores everything in PostgreSQL (it takes priority over Supabase). Photos are still
+files, saved in `.data/photos/` under the app folder, so that folder must be on a persistent volume.
+
+1. Create an empty database and a role that owns it. The app creates and upgrades its own tables on first use.
+2. Give the app `HOUSEHOLD_PASSCODE`, `AUTH_SECRET`, `SITE_URL` and
+   `DATABASE_URL=postgresql://user:password@host:5432/dbname`.
+3. Check the connection from any machine that can reach the database (for example through an SSH tunnel):
+
+   ```bash
+   DATABASE_URL=postgresql://user:password@127.0.0.1:5432/dbname npm run db:status
+   ```
+
+4. To bring over what's in your local `.data/db.json` (plans, swaps, ratings, favourites, prices and your own
+   recipes), run the import the same way. It refuses to touch a database that already has data unless you add
+   `-- --replace`. Then copy `.data/photos/` into the server's photos folder.
+
+   ```bash
+   DATABASE_URL=postgresql://user:password@127.0.0.1:5432/dbname npm run db:import
+   ```
+
+   Or skip the import: Road to Australia is planned automatically the first time the site loads.
+
 ## Going live (Supabase + Vercel, both free tiers)
 
 1. **Supabase**: create a project at [supabase.com](https://supabase.com). Open SQL Editor, paste in
@@ -97,6 +121,6 @@ To copy local ratings or swaps to the live site, run `npm run generate-plan` wit
 - `src/lib/exclusions.ts`: matching left-out ingredients against recipes
 - `src/lib/generator.ts`: the weekly planning rules
 - `src/lib/cost.ts`: budget maths (fresh items in whole packs, staples pro rata)
-- `src/lib/store/`: Supabase and local JSON storage
+- `src/lib/store/`: PostgreSQL, Supabase and local JSON storage; `postgres-migrations.ts` holds the database schema
 - `src/proxy.ts`: passcode check on every page (Next.js 16's replacement for middleware)
 - `src/lib/auth-token.ts`: signed, expiring login cookie; `src/lib/login-limiter.ts`: wrong-passcode lockout

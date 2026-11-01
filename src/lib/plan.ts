@@ -43,24 +43,29 @@ export async function planPrices(plan: Pick<Plan, "store">, ingredients: Ingredi
   return effectivePrices(ingredients, plan.store, corrections, tesco);
 }
 
+/** The plan's recipe library, scaled and with household-hidden and left-out recipes removed. */
+export async function recipesForPlan(hs: HouseholdStore, plan: Plan, library: Library): Promise<Library> {
+  return planLibrary(library, plan, await hs.getHiddenRecipes());
+}
+
 /** Generates every week of a plan from scratch without saving. */
-export async function generateFullPlan(plan: Plan, library: Library, seed?: number) {
-  const prices = await planPrices(plan, library.ingredients);
-  return generatePlan({ plan, prices, library: planLibrary(library, plan), seed });
+export async function generateFullPlan(hs: HouseholdStore, plan: Plan, library: Library, seed?: number) {
+  const [prices, usable] = await Promise.all([planPrices(plan, library.ingredients), recipesForPlan(hs, plan, library)]);
+  return generatePlan({ plan, prices, library: usable, seed });
 }
 
 /** Builds and saves every week of a plan from scratch. */
 export async function buildPlan(hs: HouseholdStore, plan: Plan, library: Library, seed?: number) {
-  const slots = await generateFullPlan(plan, library, seed);
+  const slots = await generateFullPlan(hs, plan, library, seed);
   await hs.replaceSlots(plan.id, planDates(plan), slots);
   return slots;
 }
 
 /** Loads a plan's dinners, generating them the first time and repairing any that no longer fit. */
 export async function ensurePlanSlots(hs: HouseholdStore, plan: Plan, library: Library): Promise<MealSlot[]> {
-  const slots = await hs.getSlots(plan.id);
+  const [slots, usable] = await Promise.all([hs.getSlots(plan.id), recipesForPlan(hs, plan, library)]);
   if (!slots.length) return buildPlan(hs, plan, library);
-  return repairSlots(hs, plan, slots, planLibrary(library, plan));
+  return repairSlots(hs, plan, slots, usable);
 }
 
 /**
@@ -127,8 +132,12 @@ export async function regenerateWeeks(
   library: Library,
   seed = Date.now(),
 ) {
-  const [existing, prices] = await Promise.all([hs.getSlots(plan.id), planPrices(plan, library.ingredients)]);
-  const fresh = generatePlan({ plan, weeks, existing, prices, seed, library: planLibrary(library, plan) });
+  const [existing, prices, usable] = await Promise.all([
+    hs.getSlots(plan.id),
+    planPrices(plan, library.ingredients),
+    recipesForPlan(hs, plan, library),
+  ]);
+  const fresh = generatePlan({ plan, weeks, existing, prices, seed, library: usable });
   await hs.replaceSlots(plan.id, weeks.flatMap((w) => weekDates(plan, w)), fresh);
   return fresh;
 }

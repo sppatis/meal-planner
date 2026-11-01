@@ -5,6 +5,7 @@ import { CATEGORY_STYLE } from "@/components/category-style";
 import { Checklist } from "@/components/checklist";
 import { DeleteRecipeButton } from "@/components/delete-recipe-button";
 import { FavouriteButton } from "@/components/favourite-button";
+import { VisibilityButton } from "@/components/visibility-button";
 import { NutritionPanel } from "@/components/nutrition-panel";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { ShareBox } from "@/components/share-box";
@@ -38,14 +39,16 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const recipe = library.bySlug[slug];
   if (!recipe) notFound();
 
-  const [ratings, favourites, photos, prices, slots, base] = await Promise.all([
+  const [ratings, favourites, hidden, photos, prices, slots, base] = await Promise.all([
     hs.getRatings(),
     hs.getFavourites(),
+    hs.getHiddenRecipes(),
     store.getPhotos(slug),
     planPrices({ store: shopId }, library.ingredients),
     plan ? hs.getSlots(plan.id) : [],
     siteUrl(),
   ]);
+  const isHidden = hidden.includes(slug);
 
   const shop = storeName(shopId);
   const n = nutritionPerServing(recipe, library.ingredients);
@@ -98,6 +101,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           <span>
             About <b>{gbp(recipeCost(recipe, prices, library.ingredients))}</b> for {people} at {shop}
           </span>
+          <VisibilityButton recipeSlug={slug} hidden={isHidden} labelled />
           {recipe.custom ? (
             <span className="flex items-center gap-2">
               <Link
@@ -112,6 +116,11 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
             <FavouriteButton recipeSlug={slug} favourite={favourites.includes(slug)} />
           )}
         </div>
+        {isHidden && (
+          <p className="mt-2 text-sm text-stone-500">
+            Hidden from your plans — dinners already using it will be swapped the next time the plan is opened.
+          </p>
+        )}
         <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Equipment">
           {equipment.map((e) => (
             <li

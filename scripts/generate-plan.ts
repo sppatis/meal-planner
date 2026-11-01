@@ -50,7 +50,8 @@ async function main() {
     store.getCustomRecipes(),
     store.getCustomIngredients(),
   ]);
-  const library = planLibrary(buildLibrary(customRecipes, customIngredients), plan);
+  const hidden = await hs.getHiddenRecipes();
+  const library = planLibrary(buildLibrary(customRecipes, customIngredients), plan, hidden);
   const prices = await planPrices(plan, library.ingredients);
   const slotsOut = generatePlan({
     plan,

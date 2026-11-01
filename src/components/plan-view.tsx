@@ -15,7 +15,7 @@ import type { Plan } from "@/lib/types";
 import { SetActivePlanButton } from "./set-active-plan-button";
 
 export async function PlanView({ plan: requested }: { plan?: Plan }) {
-  const { plan, isActive, library, ratings, favourites, coverPhotos, prices, slots } = await loadAppData(requested);
+  const { plan, isActive, library, ratings, favourites, hidden, coverPhotos, prices, slots } = await loadAppData(requested);
   if (!plan) notFound();
   const weeks = groupByWeek(plan, slots, library);
   const today = todayISO();
@@ -149,6 +149,7 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
                   photo={coverPhotos[slot.recipeSlug]}
                   rating={ratings[slot.recipeSlug]}
                   favourites={favourites}
+                  hidden={hidden}
                   ratings={ratings}
                   prices={prices}
                 />

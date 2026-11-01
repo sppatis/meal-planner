@@ -103,4 +103,14 @@ export const MIGRATIONS: string[] = [
   alter table price_overrides alter column store drop default;
   alter table price_overrides add primary key (store, ingredient_id);
   `,
+
+  // 4: recipes a household has turned off so they aren't planned.
+  `
+  create table hidden_recipes (
+    household_id text not null references households (id) on delete cascade,
+    recipe_slug text not null,
+    created_at timestamptz not null default now(),
+    primary key (household_id, recipe_slug)
+  );
+  `,
 ];

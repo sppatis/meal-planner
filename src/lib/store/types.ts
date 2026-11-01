@@ -35,6 +35,10 @@ export interface HouseholdStore {
 
   getFavourites(): Promise<string[]>;
   setFavourite(recipeSlug: string, favourite: boolean): Promise<void>;
+
+  /** Recipe slugs this household has turned off for planning. */
+  getHiddenRecipes(): Promise<string[]>;
+  setRecipeHidden(recipeSlug: string, hidden: boolean): Promise<void>;
 }
 
 /** Data shared by every household, plus the households themselves. */

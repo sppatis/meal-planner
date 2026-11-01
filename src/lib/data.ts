@@ -50,10 +50,11 @@ export async function loadAppData(plan?: Plan) {
   const { hs, active } = await loadPlanList();
   const current = plan ?? active;
   const settings = current ?? NO_PLAN_SETTINGS;
-  const [slots, ratings, manualFavourites, photos, prices] = await Promise.all([
+  const [slots, ratings, manualFavourites, hidden, photos, prices] = await Promise.all([
     current ? ensurePlanSlots(hs, current, fullLibrary) : ([] as MealSlot[]),
     hs.getRatings(),
     hs.getFavourites(),
+    hs.getHiddenRecipes(),
     store.getPhotos(),
     planPrices(settings, fullLibrary.ingredients),
   ]);
@@ -76,6 +77,7 @@ export async function loadAppData(plan?: Plan) {
     ratings,
     manualFavourites,
     favourites: [...favourites],
+    hidden,
     coverPhotos,
     prices,
   };

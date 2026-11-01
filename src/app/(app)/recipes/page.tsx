@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { RecipeArt } from "@/components/recipe-art";
 import { StarDisplay } from "@/components/stars";
+import { VisibilityButton } from "@/components/visibility-button";
 import { CATEGORY_LABELS } from "@/lib/constants";
 import { loadAppData } from "@/lib/data";
 import { isQuick, nutritionPerServing, totalMins } from "@/lib/nutrition";
@@ -10,40 +11,51 @@ import type { Category, Recipe } from "@/lib/types";
 export const metadata: Metadata = { title: "Recipes" };
 
 export default async function RecipesPage() {
-  const { library, ratings, favourites, coverPhotos, slots } = await loadAppData();
+  const { library, ratings, favourites, hidden, coverPhotos, slots } = await loadAppData();
   const fav = new Set(favourites);
+  const hide = new Set(hidden);
   const timesPlanned = slots.reduce<Record<string, number>>((acc, s) => {
     acc[s.recipeSlug] = (acc[s.recipeSlug] ?? 0) + 1;
     return acc;
   }, {});
   const ours = library.recipes.filter((r) => r.custom);
   const builtIn = library.recipes.filter((r) => !r.custom);
+  const hiddenCount = library.recipes.filter((r) => hide.has(r.slug)).length;
 
-  const card = (r: Recipe) => (
-    <Link
-      key={r.slug}
-      href={`/recipe/${r.slug}`}
-      className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200 hover:shadow-md"
-    >
-      <div className="aspect-[4/3] overflow-hidden">
-        <RecipeArt recipe={r} photo={coverPhotos[r.slug]} />
-      </div>
-      <div className="p-3">
-        <p className="text-sm font-semibold leading-snug group-hover:text-emerald-800">
-          {fav.has(r.slug) && <span className="mr-1 text-rose-500">♥</span>}
-          {r.name}
-        </p>
-        <p className="mt-1 text-xs text-stone-500">
-          {r.custom ? `${CATEGORY_LABELS[r.category]} · ` : ""}
-          {nutritionPerServing(r, library.ingredients).kcal} kcal · {totalMins(r)} min{isQuick(r) ? " · quick" : ""}
-        </p>
-        <div className="mt-1 flex items-center justify-between">
-          <StarDisplay value={ratings[r.slug]} size="h-3 w-3" />
-          <span className="text-[11px] text-stone-400">{timesPlanned[r.slug] ?? 0}× planned</span>
-        </div>
-      </div>
-    </Link>
-  );
+  const card = (r: Recipe) => {
+    const off = hide.has(r.slug);
+    return (
+      <article
+        key={r.slug}
+        className={`group relative overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition hover:shadow-md ${
+          off ? "opacity-55 ring-stone-200" : "ring-stone-200"
+        }`}
+      >
+        <VisibilityButton recipeSlug={r.slug} hidden={off} className="absolute right-2 top-2 z-10" />
+        <Link href={`/recipe/${r.slug}`} className="block">
+          <div className="aspect-[4/3] overflow-hidden">
+            <RecipeArt recipe={r} photo={coverPhotos[r.slug]} />
+          </div>
+          <div className="p-3">
+            <p className="text-sm font-semibold leading-snug group-hover:text-emerald-800">
+              {fav.has(r.slug) && <span className="mr-1 text-rose-500">♥</span>}
+              {r.name}
+            </p>
+            <p className="mt-1 text-xs text-stone-500">
+              {r.custom ? `${CATEGORY_LABELS[r.category]} · ` : ""}
+              {nutritionPerServing(r, library.ingredients).kcal} kcal · {totalMins(r)} min
+              {isQuick(r) ? " · quick" : ""}
+              {off ? " · hidden from plans" : ""}
+            </p>
+            <div className="mt-1 flex items-center justify-between">
+              <StarDisplay value={ratings[r.slug]} size="h-3 w-3" />
+              <span className="text-[11px] text-stone-400">{timesPlanned[r.slug] ?? 0}× planned</span>
+            </div>
+          </div>
+        </Link>
+      </article>
+    );
+  };
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-16">
@@ -51,7 +63,9 @@ export default async function RecipesPage() {
         <div>
           <h1 className="text-3xl font-bold">All recipes</h1>
           <p className="mt-2 text-stone-600">
-            {library.recipes.length} dinners, all free of fish, shellfish and nuts. Hearts are your favourites.
+            {library.recipes.length} dinners, all free of fish, shellfish and nuts. Hearts are your favourites; the eye
+            turns a recipe on or off for your plans
+            {hiddenCount ? ` (${hiddenCount} hidden)` : ""}.
           </p>
         </div>
         <Link

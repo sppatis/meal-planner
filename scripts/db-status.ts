@@ -10,7 +10,7 @@ async function main() {
   const [who] = await sql`select current_user as "user", current_database() as db, version() as version`;
   const [{ v }] = await sql`select coalesce(max(version), 0)::int as v from schema_migrations`;
   console.log(`Connected as ${who.user} to ${who.db}. Schema version ${v}.\n${who.version}\n`);
-  const tables = ["plans", "settings", "meal_slots", "ratings", "favourites", "photos", "price_overrides", "custom_recipes", "custom_ingredients"];
+  const tables = ["plans", "settings", "meal_slots", "ratings", "favourites", "hidden_recipes", "photos", "price_overrides", "custom_recipes", "custom_ingredients"];
   for (const t of tables) {
     const [{ n }] = await sql`select count(*)::int as n from ${sql(t)}`;
     console.log(`${t.padEnd(20)} ${n}`);

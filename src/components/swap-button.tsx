@@ -23,6 +23,8 @@ interface Props {
   currentSlug: string;
   weekSlugs: string[];
   favourites: string[];
+  /** Recipes this household has turned off for planning. */
+  hidden: string[];
   ratings: Record<string, number>;
   prices: PriceOverrides;
 }
@@ -33,11 +35,28 @@ export function SwapButton(props: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const { planId, budget, excluded, people, quickDays, date, role, currentSlug, weekSlugs, favourites, ratings, prices } = props;
+  const {
+    planId,
+    budget,
+    excluded,
+    people,
+    quickDays,
+    date,
+    role,
+    currentSlug,
+    weekSlugs,
+    favourites,
+    hidden,
+    ratings,
+    prices,
+  } = props;
   const sharedLibrary = useLibrary();
   // The week may hold dinners the plan now excludes, so costs come from the whole library at the plan's size.
   const fullLibrary = useMemo(() => scaledLibrary(sharedLibrary, people), [sharedLibrary, people]);
-  const library = useMemo(() => planLibrary(sharedLibrary, { excluded, people }), [sharedLibrary, excluded, people]);
+  const library = useMemo(
+    () => planLibrary(sharedLibrary, { excluded, people }, hidden),
+    [sharedLibrary, excluded, people, hidden],
+  );
 
   const options = useMemo(() => {
     const cost = (slugs: string[]) =>

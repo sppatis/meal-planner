@@ -19,11 +19,25 @@ interface Props {
   photo?: string;
   rating?: number;
   favourites: string[];
+  hidden: string[];
   ratings: Record<string, number>;
   prices: PriceOverrides;
 }
 
-export function MealCard({ plan, slot, recipe, ingredients, weekSlugs, isToday, photo, rating, favourites, ratings, prices }: Props) {
+export function MealCard({
+  plan,
+  slot,
+  recipe,
+  ingredients,
+  weekSlugs,
+  isToday,
+  photo,
+  rating,
+  favourites,
+  hidden,
+  ratings,
+  prices,
+}: Props) {
   const day = dayIndex(slot.date);
   const quickNight = plan.quickDays.includes(day);
   const n = nutritionPerServing(recipe, ingredients);
@@ -97,6 +111,7 @@ export function MealCard({ plan, slot, recipe, ingredients, weekSlugs, isToday, 
           currentSlug={slot.recipeSlug}
           weekSlugs={weekSlugs}
           favourites={favourites}
+          hidden={hidden}
           ratings={ratings}
           prices={prices}
         />

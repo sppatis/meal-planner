@@ -19,6 +19,8 @@ export interface LocalDb {
   ratings: Record<string, Record<string, number>>;
   /** Favourite recipe slugs by household. */
   favourites: Record<string, string[]>;
+  /** Recipe slugs each household has turned off for planning. */
+  hiddenRecipes: Record<string, string[]>;
   photos: Photo[];
   /** Price corrections by supermarket, then ingredient. */
   prices: Record<string, Record<string, number>>;
@@ -58,6 +60,7 @@ export function normaliseLocalDb(raw: any): LocalDb {
     })),
     ratings: flatRatings ? { [HOME_HOUSEHOLD]: raw.ratings } : (raw.ratings ?? {}),
     favourites: Array.isArray(raw.favourites) ? { [HOME_HOUSEHOLD]: raw.favourites } : (raw.favourites ?? {}),
+    hiddenRecipes: raw.hiddenRecipes ?? {},
     photos: raw.photos ?? [],
     prices: flatPrices ? { tesco: raw.prices } : (raw.prices ?? {}),
     customRecipes: raw.customRecipes ?? [],
@@ -173,6 +176,16 @@ function householdStore(h: string): HouseholdStore {
         db.favourites[h] = favourite ? [...list, recipeSlug] : list;
       });
     },
+
+    async getHiddenRecipes() {
+      return (await read()).hiddenRecipes[h] ?? [];
+    },
+    async setRecipeHidden(recipeSlug, hidden) {
+      await update((db) => {
+        const list = (db.hiddenRecipes[h] ?? []).filter((s) => s !== recipeSlug);
+        db.hiddenRecipes[h] = hidden ? [...list, recipeSlug] : list;
+      });
+    },
   };
 }
 
@@ -200,6 +213,7 @@ export const localStore: Store = {
       delete db.activePlanIds[id];
       delete db.ratings[id];
       delete db.favourites[id];
+      delete db.hiddenRecipes[id];
     });
   },
 

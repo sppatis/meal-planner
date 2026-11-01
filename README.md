@@ -24,9 +24,12 @@ Dinner plans for any household size. The original plan, **Road to Australia**, f
   active** puts a later plan on the homepage. Other plans can be viewed, edited or deleted. Changing a plan's dates
   re-plans it; changing the budget, people, supermarket, quick nights or ingredients only replaces the dinners that no
   longer fit, unless you tick **Re-plan every dinner**.
+- **Recipes**: each card has an eye icon for your household — open means the recipe can be planned, closed hides it
+  from your plans (and swaps it out of dinners that already use it). Hidden recipes stay on the list, faded, so you
+  can turn them back on.
 - **Recipe page**: shopping list with links for the plan's supermarket, method, Ninja method, photo upload, 5-star
-  rating and favourite toggle. Recipes rated 4 stars or more automatically become favourites. Amounts and costs follow
-  the plan's number of people.
+  rating, favourite toggle and the same eye control. Recipes rated 4 stars or more automatically become favourites.
+  Amounts and costs follow the plan's number of people.
 - **Our recipes**: on Recipes, tap **Add a recipe** to add your own. Write ingredients for 3 people (plans scale them)
   from the Tesco-priced catalogue (or add a new one with its pack price and label nutrition) and the calories, cost,
   shopping list and MyFitnessPal page are worked out the same way as the built-in recipes. Saving is blocked if it
@@ -55,8 +58,8 @@ Without `DATABASE_URL`, data is stored in `.data/db.json` and photos in `.data/p
 Each household has its own passcode and there are no accounts. Everyone types their passcode into the same box,
 and the passcode decides which household they're signed into.
 
-- **Private to each household:** plans, dinners, ratings, favourites and which plan is active. Another household's
-  plan addresses just show "not found".
+- **Private to each household:** plans, dinners, ratings, favourites, which recipes are hidden from plans, and which
+  plan is active. Another household's plan addresses just show "not found".
 - **Shared by everyone:** your own recipes and ingredients, photos and price corrections (per supermarket). Any
   household can edit or delete them; plans using a deleted recipe get a substitute the next time they're opened.
 - The household's name is shown next to **Sign out** in the top bar.

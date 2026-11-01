@@ -30,12 +30,20 @@ export function excludedBy(recipe: Recipe, terms: string[], ingredients: Ingredi
   });
 }
 
-/** The library restricted to recipes the plan allows, with quantities for the plan's number of people. */
-export function planLibrary(library: Library, plan: Pick<Plan, "excluded"> & Partial<Pick<Plan, "people">>): Library {
+/**
+ * The library restricted to recipes the plan allows, with quantities for the plan's number of people.
+ * `hidden` is the household's recipes turned off for planning.
+ */
+export function planLibrary(
+  library: Library,
+  plan: Pick<Plan, "excluded"> & Partial<Pick<Plan, "people">>,
+  hidden: Iterable<string> = [],
+): Library {
   const people = plan.people ?? SERVINGS;
-  if (!plan.excluded.length && people === SERVINGS) return library;
+  const hide = hidden instanceof Set ? hidden : new Set(hidden);
+  if (!plan.excluded.length && people === SERVINGS && hide.size === 0) return library;
   const recipes = library.recipes
-    .filter((r) => !excludedBy(r, plan.excluded, library.ingredients))
+    .filter((r) => !hide.has(r.slug) && !excludedBy(r, plan.excluded, library.ingredients))
     .map((r) => scaleRecipe(r, people, library.ingredients));
   return { ...library, recipes, bySlug: Object.fromEntries(recipes.map((r) => [r.slug, r])) };
 }

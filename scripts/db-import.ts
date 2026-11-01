@@ -23,6 +23,7 @@ const DATA_TABLES = [
   "settings",
   "ratings",
   "favourites",
+  "hidden_recipes",
   "photos",
   "price_overrides",
   "custom_recipes",
@@ -46,7 +47,7 @@ async function main() {
     db.households = db.households.map((h) => (h.id === HOME_HOUSEHOLD ? { ...h, id: target, name: target } : h));
     db.plans = db.plans.map((p) => ({ ...p, householdId: rename(p.householdId) }));
     db.slots = db.slots.map((s) => ({ ...s, householdId: rename(s.householdId) }));
-    for (const key of ["activePlanIds", "ratings", "favourites"] as const) {
+    for (const key of ["activePlanIds", "ratings", "favourites", "hiddenRecipes"] as const) {
       db[key] = Object.fromEntries(Object.entries(db[key]).map(([h, v]) => [rename(h), v])) as never;
     }
   }
@@ -99,6 +100,10 @@ async function main() {
       slugs.map((recipe_slug) => ({ household_id, recipe_slug })),
     );
     if (favourites.length) await tx`insert into favourites ${tx(favourites, "household_id", "recipe_slug")}`;
+    const hidden = Object.entries(db.hiddenRecipes).flatMap(([household_id, slugs]) =>
+      slugs.map((recipe_slug) => ({ household_id, recipe_slug })),
+    );
+    if (hidden.length) await tx`insert into hidden_recipes ${tx(hidden, "household_id", "recipe_slug")}`;
 
     const photos = db.photos.map((p) => ({
       id: p.id,
@@ -123,7 +128,7 @@ async function main() {
   console.log(
     `Imported ${db.households.length} households (${db.households.map((h) => h.id).join(", ")}), ` +
       `${db.plans.length} plans, ${db.slots.length} dinners, ${count(db.ratings)} ratings, ` +
-      `${count(db.favourites)} favourites, ${db.photos.length} photos, ${count(db.prices)} prices, ` +
+      `${count(db.favourites)} favourites, ${count(db.hiddenRecipes)} hidden, ${db.photos.length} photos, ${count(db.prices)} prices, ` +
       `${db.customRecipes.length} recipes and ${db.customIngredients.length} ingredients of your own.`,
   );
   const missing = db.photos.filter((p) => !existsSync(path.join(LOCAL_PHOTO_DIR, path.basename(p.url))));

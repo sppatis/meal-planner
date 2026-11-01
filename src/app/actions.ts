@@ -138,7 +138,7 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
   let slots: MealSlot[] | null = null;
   if (rebuild) {
     try {
-      slots = await generateFullPlan(plan, library);
+      slots = await generateFullPlan(hs, plan, library);
     } catch (err) {
       if (err instanceof PlanGenerationError) return { ok: false, errors: [err.message] };
       throw err;
@@ -171,6 +171,18 @@ export async function setFavourite(recipeSlug: string, favourite: boolean) {
   const hs = await householdStore();
   await assertRecipe(recipeSlug);
   await hs.setFavourite(recipeSlug, favourite);
+  refreshAll();
+}
+
+/** Turn a recipe off (or back on) for this household's plans. Off recipes are swapped out of existing dinners. */
+export async function setRecipeHidden(recipeSlug: string, hidden: boolean) {
+  const { hs, plans } = await loadPlanList();
+  await assertRecipe(recipeSlug);
+  await hs.setRecipeHidden(recipeSlug, hidden);
+  if (hidden && plans.length) {
+    const library = await loadLibrary();
+    for (const plan of plans) await ensurePlanSlots(hs, plan, library);
+  }
   refreshAll();
 }
 

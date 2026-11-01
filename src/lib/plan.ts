@@ -13,12 +13,15 @@ import type { IngredientMap, MealSlot, Plan, Recipe } from "./types";
  * Fills in settings added after a plan was saved: quick nights (Monday to Wednesday) and
  * people and supermarket (3 at Tesco), which is how those plans were always planned.
  */
-export function withPlanDefaults(plan: Partial<Plan> & Omit<Plan, "quickDays" | "people" | "store">): Plan {
+export function withPlanDefaults(
+  plan: Partial<Plan> & Omit<Plan, "quickDays" | "people" | "store" | "excludedCategories">,
+): Plan {
   return {
     ...plan,
     quickDays: plan.quickDays ?? DEFAULT_QUICK_DAYS,
     people: plan.people ?? SERVINGS,
     store: isStoreId(plan.store) ? plan.store : DEFAULT_STORE,
+    excludedCategories: plan.excludedCategories ?? [],
   };
 }
 
@@ -26,11 +29,9 @@ export function withPlanDefaults(plan: Partial<Plan> & Omit<Plan, "quickDays" | 
 export async function loadPlans(hs: HouseholdStore): Promise<{ plans: Plan[]; active: Plan | null }> {
   const [stored, activeId] = await Promise.all([hs.getPlans(), hs.getActivePlanId()]);
   const plans = stored.map(withPlanDefaults);
-  let active = plans.find((p) => p.id === activeId) ?? null;
-  if (!active && plans.length) {
-    active = plans[0];
-    await hs.setActivePlanId(active.id);
-  }
+  const active = plans.find((p) => p.id === activeId) ?? null;
+  // A missing active id (deleted plan) is cleared so the homepage can show the start CTA.
+  if (activeId && !active) await hs.setActivePlanId(null);
   return { plans, active };
 }
 

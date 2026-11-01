@@ -4,7 +4,7 @@ import { BudgetBar } from "@/components/budget-bar";
 import { MealCard } from "@/components/meal-card";
 import { RegenerateWeekButton } from "@/components/regenerate-week-button";
 import { ScrollToWeek } from "@/components/scroll-to-week";
-import { KCAL_CAP } from "@/lib/constants";
+import { CATEGORY_LABELS, KCAL_CAP } from "@/lib/constants";
 import { gbp, weekCost } from "@/lib/cost";
 import { daysBetween, formatDate, listDays, planEnd, todayISO, weekDates, weekOf } from "@/lib/dates";
 import { loadAppData } from "@/lib/data";
@@ -70,9 +70,14 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
             {storeName(plan.store)}.
             {plan.quickDays.length > 0 && ` Quick dinners on ${listDays(plan.quickDays)}.`}
           </p>
-          {plan.excluded.length > 0 && (
+          {(plan.excludedCategories.length > 0 || plan.excluded.length > 0) && (
             <p className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
               <span className="text-emerald-100">Leaving out:</span>
+              {plan.excludedCategories.map((c) => (
+                <span key={c} className="rounded-full bg-white/15 px-2 py-0.5 font-medium">
+                  {CATEGORY_LABELS[c]}
+                </span>
+              ))}
               {plan.excluded.map((t) => (
                 <span key={t} className="rounded-full bg-white/15 px-2 py-0.5 font-medium">
                   {t}

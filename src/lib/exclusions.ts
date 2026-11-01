@@ -36,14 +36,20 @@ export function excludedBy(recipe: Recipe, terms: string[], ingredients: Ingredi
  */
 export function planLibrary(
   library: Library,
-  plan: Pick<Plan, "excluded"> & Partial<Pick<Plan, "people">>,
+  plan: Pick<Plan, "excluded"> & Partial<Pick<Plan, "people" | "excludedCategories">>,
   hidden: Iterable<string> = [],
 ): Library {
   const people = plan.people ?? SERVINGS;
   const hide = hidden instanceof Set ? hidden : new Set(hidden);
-  if (!plan.excluded.length && people === SERVINGS && hide.size === 0) return library;
+  const excludedCats = new Set(plan.excludedCategories ?? []);
+  if (!plan.excluded.length && people === SERVINGS && hide.size === 0 && excludedCats.size === 0) return library;
   const recipes = library.recipes
-    .filter((r) => !hide.has(r.slug) && !excludedBy(r, plan.excluded, library.ingredients))
+    .filter(
+      (r) =>
+        !hide.has(r.slug) &&
+        !excludedCats.has(r.category) &&
+        !excludedBy(r, plan.excluded, library.ingredients),
+    )
     .map((r) => scaleRecipe(r, people, library.ingredients));
   return { ...library, recipes, bySlug: Object.fromEntries(recipes.map((r) => [r.slug, r])) };
 }

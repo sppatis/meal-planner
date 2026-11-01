@@ -16,14 +16,15 @@ Dinner plans for any household size. The original plan, **Road to Australia**, f
 - **Plan** (homepage): the active plan's weeks as cards. Tap a card for the recipe, or **Replace** to swap in a
   favourite. The dialog shows the new weekly cost. **Shuffle week** regenerates a whole week. A household with no
   plan yet sees a **Start a new plan** button instead.
-- **Plans**: every plan with its dates, people, supermarket, budget and left-out ingredients. **New plan** asks for a
-  title, number of people, supermarket, start date (weeks run Monday to Sunday), number of weeks, weekly budget (about
-  £20 a head until you type your own), quick nights and any ingredients to leave out. Tap the days that need a quick
-  dinner. Type an ingredient and press Enter to add it; tap the × on its tag to remove it. The form shows which dinners
-  will be left out before you save, and every dinner is planned automatically. The first plan becomes active; **Make
-  active** puts a later plan on the homepage. Other plans can be viewed, edited or deleted. Changing a plan's dates
-  re-plans it; changing the budget, people, supermarket, quick nights or ingredients only replaces the dinners that no
-  longer fit, unless you tick **Re-plan every dinner**.
+- **Plans**: every plan with its dates, people, supermarket, budget, recipe groups and left-out ingredients. Use the
+  active switch to put a plan on the homepage or turn it off. Inactive plans can be deleted one by one or with **Delete
+  inactive plans**. **New plan** asks for a title, number of people, supermarket, start date (weeks run Monday to
+  Sunday), number of weeks, weekly budget (about £20 a head until you type your own), which recipe groups to include
+  (remove a lozenge to leave a whole group out), quick nights and any ingredients to leave out. Tap the days that need a
+  quick dinner. Type an ingredient and press Enter to add it; tap the × on its tag to remove it. The form shows which
+  dinners will be left out before you save, and every dinner is planned automatically. The first plan becomes active.
+  Changing a plan's dates re-plans it; changing the budget, people, supermarket, recipe groups, quick nights or
+  ingredients only replaces the dinners that no longer fit, unless you tick **Re-plan every dinner**.
 - **Recipes**: each card has an eye icon for your household — open means the recipe can be planned, closed hides it
   from your plans (and swaps it out of dinners that already use it). Hidden recipes stay on the list, faded, so you
   can turn them back on.

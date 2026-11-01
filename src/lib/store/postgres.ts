@@ -90,8 +90,11 @@ function householdStore(h: string): HouseholdStore {
     },
     async setActivePlanId(id) {
       const sql = await getSql();
-      await sql`insert into settings (household_id, key, value) values (${h}, 'active_plan_id', ${sql.json(id)})
-        on conflict (household_id, key) do update set value = excluded.value`;
+      if (id === null) await sql`delete from settings where household_id = ${h} and key = 'active_plan_id'`;
+      else {
+        await sql`insert into settings (household_id, key, value) values (${h}, 'active_plan_id', ${sql.json(id)})
+          on conflict (household_id, key) do update set value = excluded.value`;
+      }
     },
 
     async getSlots(planId) {

@@ -26,6 +26,7 @@ import { useLibrary } from "./library-provider";
 const field =
   "w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600";
 const label = "mb-1 block text-xs font-semibold text-stone-600";
+const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
 
 interface Props {
   plan?: Plan;
@@ -48,6 +49,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
   // A new plan's budget follows the number of people until it's typed in by hand.
   const [budgetEdited, setBudgetEdited] = useState(!!plan);
   const [excluded, setExcluded] = useState<string[]>(plan?.excluded ?? []);
+  const [excludedCategories, setExcludedCategories] = useState<Category[]>(plan?.excludedCategories ?? []);
   const [term, setTerm] = useState("");
   const [quickDays, setQuickDays] = useState<number[]>(plan?.quickDays ?? DEFAULT_QUICK_DAYS);
   const [makeActive, setMakeActive] = useState(!plan);
@@ -69,11 +71,14 @@ export function PlanForm({ plan, isActive = false }: Props) {
         .filter((x): x is { recipe: typeof x.recipe; term: string } => !!x.term),
     [library, excluded],
   );
-  const emptied = (Object.keys(CATEGORY_LABELS) as Category[]).filter(
+  const includedCategories = ALL_CATEGORIES.filter((c) => !excludedCategories.includes(c));
+  const emptied = includedCategories.filter(
     (c) =>
       library.recipes.some((r) => r.category === c) && !library.recipes.some((r) => r.category === c && !leftOut.some((x) => x.recipe === r)),
   );
-  const quickRecipes = library.recipes.filter((r) => isQuick(r) && !leftOut.some((x) => x.recipe === r));
+  const quickRecipes = library.recipes.filter(
+    (r) => isQuick(r) && !excludedCategories.includes(r.category) && !leftOut.some((x) => x.recipe === r),
+  );
   const quickFakeaways = quickRecipes.filter((r) => r.category === "fakeaway").length;
 
   function toggleDay(day: number) {
@@ -108,6 +113,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
       weeks: Number(weeks),
       weeklyBudget: Number(budget),
       excluded: pendingTerm ? [...excluded, pendingTerm.toLowerCase()] : excluded,
+      excludedCategories,
       quickDays,
       people: Number(people),
       store: shop,
@@ -292,6 +298,51 @@ export function PlanForm({ plan, isActive = false }: Props) {
       </fieldset>
 
       <section className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+        <h2 className="font-bold">Recipe groups</h2>
+        <p className="mt-1 text-xs text-stone-500">
+          Groups in the plan appear as lozenges. Remove one to leave that whole group out of recipe selection; nights
+          that would have used it become &quot;mix it up&quot; instead. Add a group back from the list below.
+        </p>
+        <ul className="mt-3 flex flex-wrap gap-2" aria-label="Included recipe groups">
+          {includedCategories.map((c) => (
+            <li
+              key={c}
+              className="flex items-center gap-1 rounded-full bg-emerald-50 py-1 pl-3 pr-1 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200"
+            >
+              {CATEGORY_LABELS[c]}
+              <button
+                type="button"
+                aria-label={`Remove ${CATEGORY_LABELS[c]} from the plan`}
+                disabled={includedCategories.length <= 1}
+                onClick={() => setExcludedCategories((list) => [...list, c])}
+                className="flex h-5 w-5 items-center justify-center rounded-full text-emerald-700 hover:bg-emerald-200 hover:text-emerald-950 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+        {excludedCategories.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-semibold text-stone-500">Add back</p>
+            <ul className="mt-1.5 flex flex-wrap gap-2" aria-label="Excluded recipe groups">
+              {excludedCategories.map((c) => (
+                <li key={c}>
+                  <button
+                    type="button"
+                    onClick={() => setExcludedCategories((list) => list.filter((x) => x !== c))}
+                    className="rounded-full bg-stone-100 px-3 py-1 text-sm font-medium text-stone-600 ring-1 ring-stone-200 hover:bg-emerald-50 hover:text-emerald-800 hover:ring-emerald-200"
+                  >
+                    + {CATEGORY_LABELS[c]}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
         <label className="font-bold" htmlFor="exclude">
           Ingredients to leave out
         </label>
@@ -392,9 +443,9 @@ export function PlanForm({ plan, isActive = false }: Props) {
                 Re-plan every dinner with these settings
               </label>
               <p className="mt-1 pl-6 text-xs text-stone-500">
-                Otherwise your current dinners are kept, and only ones using a left-out ingredient or too slow for a
-                quick night are swapped. Tick this after changing the budget, number of people or supermarket, so the
-                dinners are chosen to fit the new weekly cost.
+                Otherwise your current dinners are kept, and only ones using a left-out ingredient or recipe group, or
+                too slow for a quick night, are swapped. Tick this after changing the budget, people, supermarket or
+                recipe groups, so the dinners are chosen to fit the new weekly cost.
               </p>
             </>
           )}

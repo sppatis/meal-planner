@@ -23,7 +23,8 @@ export interface HouseholdStore {
   /** Deletes the plan and its dinners. */
   deletePlan(id: string): Promise<void>;
   getActivePlanId(): Promise<string | null>;
-  setActivePlanId(id: string): Promise<void>;
+  /** Pass null to clear the active plan so the homepage shows the start CTA. */
+  setActivePlanId(id: string | null): Promise<void>;
 
   getSlots(planId: string): Promise<MealSlot[]>;
   /** Replace the plan's slots whose dates fall within `dates` with `slots`. */

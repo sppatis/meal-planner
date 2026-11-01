@@ -16,6 +16,8 @@ import { isStoreId } from "@/lib/stores";
 import type { Aisle, Category, Ingredient, MealSlot, Plan, Protein, Recipe, Unit } from "@/lib/types";
 import { ingredientProblems, recipeProblems } from "@/lib/validate";
 
+const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
+
 function refreshAll() {
   revalidatePath("/", "layout");
 }
@@ -47,9 +49,10 @@ export async function regenerateWeek(planId: string, week: number) {
   refreshAll();
 }
 
-export async function setActivePlan(planId: string) {
+/** Make a plan active, or pass null to deactivate so the homepage shows the start CTA. */
+export async function setActivePlan(planId: string | null) {
   const hs = await householdStore();
-  await requirePlan(planId);
+  if (planId !== null) await requirePlan(planId);
   await hs.setActivePlanId(planId);
   refreshAll();
 }
@@ -57,8 +60,16 @@ export async function setActivePlan(planId: string) {
 export async function deletePlan(planId: string) {
   const { hs, plans, active } = await loadPlanList();
   if (!plans.some((p) => p.id === planId)) throw new Error("Unknown plan");
-  if (active?.id === planId) throw new Error("Make another plan active before deleting this one");
+  if (active?.id === planId) throw new Error("Deactivate this plan before deleting it");
   await hs.deletePlan(planId);
+  refreshAll();
+}
+
+export async function deleteInactivePlans() {
+  const { hs, plans, active } = await loadPlanList();
+  for (const plan of plans) {
+    if (plan.id !== active?.id) await hs.deletePlan(plan.id);
+  }
   refreshAll();
 }
 
@@ -70,6 +81,8 @@ export interface PlanDraft {
   weeks: number;
   weeklyBudget: number;
   excluded: string[];
+  /** Recipe groups to leave out of planning. */
+  excludedCategories: string[];
   quickDays: number[];
   people: number;
   store: string;
@@ -103,6 +116,13 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
   ].sort((a, b) => a - b);
   const people = num(draft.people);
   const storeId = draft.store;
+  const excludedCategories = [
+    ...new Set(
+      (Array.isArray(draft.excludedCategories) ? draft.excludedCategories : []).filter((c): c is Category =>
+        CATEGORIES.includes(c as Category),
+      ),
+    ),
+  ];
 
   if (title.length < 2) errors.push("Give the plan a title");
   if (!startDate || Number.isNaN(parseISO(startDate).getTime())) errors.push("Choose a start date");
@@ -112,6 +132,7 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
     errors.push(`The plan can feed ${MIN_PEOPLE} to ${MAX_PEOPLE} people`);
   }
   if (!isStoreId(storeId)) errors.push("Choose a supermarket");
+  if (excludedCategories.length >= CATEGORIES.length) errors.push("Keep at least one recipe group in the plan");
   if (errors.length || !isStoreId(storeId)) return { ok: false, errors };
 
   let id = existing?.id;
@@ -127,6 +148,7 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
     weeks,
     weeklyBudget,
     excluded,
+    excludedCategories,
     quickDays,
     people,
     store: storeId,

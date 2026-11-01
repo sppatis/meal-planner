@@ -132,7 +132,8 @@ function householdStore(h: string): HouseholdStore {
     },
     async setActivePlanId(id) {
       await update((db) => {
-        db.activePlanIds[h] = id;
+        if (id === null) delete db.activePlanIds[h];
+        else db.activePlanIds[h] = id;
       });
     },
 

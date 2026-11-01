@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DeleteInactivePlansButton } from "@/components/delete-inactive-plans-button";
 import { DeletePlanButton } from "@/components/delete-plan-button";
-import { SetActivePlanButton } from "@/components/set-active-plan-button";
+import { PlanActiveToggle } from "@/components/plan-active-toggle";
+import { CATEGORY_LABELS } from "@/lib/constants";
 import { gbp } from "@/lib/cost";
 import { addDays, formatDate, listDays, planEnd, todayISO } from "@/lib/dates";
 import { loadPlanList } from "@/lib/data";
@@ -20,20 +22,27 @@ export default async function PlansPage() {
   const { plans, active } = await loadPlanList();
   const today = todayISO();
   const long = { day: "numeric", month: "short", year: "numeric" } as const;
+  const inactiveCount = plans.filter((p) => p.id !== active?.id).length;
 
   return (
     <main className="mx-auto max-w-4xl px-4 pb-16">
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Plans</h1>
-          <p className="mt-2 text-stone-600">The active plan is the one shown on the homepage.</p>
+          <p className="mt-2 text-stone-600">
+            The active plan is the one shown on the homepage. Turn a plan off to clear the homepage, or delete any plan
+            that isn&apos;t active.
+          </p>
         </div>
-        <Link
-          href="/plans/new"
-          className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
-        >
-          + New plan
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <DeleteInactivePlansButton count={inactiveCount} />
+          <Link
+            href="/plans/new"
+            className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+          >
+            + New plan
+          </Link>
+        </div>
       </div>
 
       {plans.length === 0 && (
@@ -61,11 +70,6 @@ export default async function PlansPage() {
                     <Link href={isActive ? "/" : `/plans/${plan.id}`} className="text-lg font-bold hover:text-emerald-800">
                       {plan.title}
                     </Link>
-                    {isActive && (
-                      <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
-                        Active
-                      </span>
-                    )}
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${s.style}`}>{s.text}</span>
                   </div>
                   <p className="mt-1 text-sm text-stone-600">
@@ -78,11 +82,22 @@ export default async function PlansPage() {
                   <p className="mt-1 text-sm text-stone-600">
                     {plan.quickDays.length ? `Quick nights: ${listDays(plan.quickDays)}` : "No quick nights"}
                   </p>
-                  {plan.excluded.length > 0 && (
+                  {(plan.excludedCategories.length > 0 || plan.excluded.length > 0) && (
                     <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                       <span className="text-stone-500">Leaving out:</span>
+                      {plan.excludedCategories.map((c) => (
+                        <span
+                          key={c}
+                          className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-900 ring-1 ring-amber-200"
+                        >
+                          {CATEGORY_LABELS[c]}
+                        </span>
+                      ))}
                       {plan.excluded.map((t) => (
-                        <span key={t} className="rounded-full bg-rose-50 px-2 py-0.5 font-medium text-rose-800 ring-1 ring-rose-200">
+                        <span
+                          key={t}
+                          className="rounded-full bg-rose-50 px-2 py-0.5 font-medium text-rose-800 ring-1 ring-rose-200"
+                        >
                           {t}
                         </span>
                       ))}
@@ -90,6 +105,7 @@ export default async function PlansPage() {
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-1">
+                  <PlanActiveToggle planId={plan.id} active={isActive} />
                   <Link
                     href={isActive ? "/" : `/plans/${plan.id}`}
                     className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
@@ -103,7 +119,6 @@ export default async function PlansPage() {
                     Edit
                   </Link>
                   {!isActive && <DeletePlanButton planId={plan.id} title={plan.title} />}
-                  {!isActive && <SetActivePlanButton planId={plan.id} />}
                 </div>
               </div>
             </li>

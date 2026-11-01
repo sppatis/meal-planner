@@ -103,6 +103,7 @@ export function MealCard({
           planId={plan.id}
           budget={plan.weeklyBudget}
           excluded={plan.excluded}
+          excludedCategories={plan.excludedCategories}
           people={plan.people}
           quickDays={plan.quickDays}
           date={slot.date}

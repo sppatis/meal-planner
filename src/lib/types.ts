@@ -100,6 +100,8 @@ export interface Plan {
   weeklyBudget: number;
   /** Words for ingredients to leave out, e.g. "mushroom". Matched against ingredient and recipe names. */
   excluded: string[];
+  /** Recipe groups left out of planning (rice, pasta, …). Empty means every group is allowed. */
+  excludedCategories: Category[];
   /** Weekdays (0 = Monday) that need a quick dinner. */
   quickDays: number[];
   /** Number of people eating; recipe quantities and costs scale to this. */

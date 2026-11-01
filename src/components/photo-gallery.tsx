@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { deletePhoto, uploadPhoto } from "@/app/actions";
 import type { Photo } from "@/lib/types";
+import { ConfirmModal } from "./confirm-modal";
 
 const MAX_EDGE = 1600;
 
@@ -23,6 +24,7 @@ export function PhotoGallery({ recipeSlug, photos, recipeName }: { recipeSlug: s
   const input = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [active, setActive] = useState(0);
   const current = photos[Math.min(active, photos.length - 1)];
 
@@ -100,15 +102,29 @@ export function PhotoGallery({ recipeSlug, photos, recipeName }: { recipeSlug: s
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (confirm("Delete this photo?")) startTransition(() => deletePhoto(current.id));
-            }}
+            onClick={() => setConfirmDelete(true)}
             className="rounded-lg px-3 py-1.5 text-sm text-stone-500 hover:bg-rose-50 hover:text-rose-700"
           >
             Delete photo
           </button>
         )}
       </div>
+      <ConfirmModal
+        open={confirmDelete}
+        title="Delete this photo?"
+        description={`Remove this photo of ${recipeName} from the gallery.`}
+        confirmLabel="Delete photo"
+        danger
+        pending={pending}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          if (!current) return;
+          startTransition(async () => {
+            await deletePhoto(current.id);
+            setConfirmDelete(false);
+          });
+        }}
+      />
       <input
         ref={input}
         type="file"

@@ -1,13 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_COOKIE, authRequired, cookieOptions, createToken, RENEW_AFTER_SECONDS, tokenAge } from "@/lib/auth-token";
+import { AUTH_COOKIE, authRequired, cookieOptions, createToken, readToken, RENEW_AFTER_SECONDS } from "@/lib/auth-token";
 
 export async function proxy(request: NextRequest) {
   if (!authRequired()) return NextResponse.next();
 
-  const age = await tokenAge(request.cookies.get(AUTH_COOKIE)?.value);
-  if (age !== null) {
+  const session = await readToken(request.cookies.get(AUTH_COOKIE)?.value);
+  if (session) {
     const response = NextResponse.next();
-    if (age > RENEW_AFTER_SECONDS) response.cookies.set(AUTH_COOKIE, await createToken(), cookieOptions);
+    if (session.age > RENEW_AFTER_SECONDS) {
+      const token = await createToken({ id: session.householdId, sessionVersion: session.version });
+      response.cookies.set(AUTH_COOKIE, token, cookieOptions);
+    }
     return response;
   }
 

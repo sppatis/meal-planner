@@ -10,6 +10,7 @@
     "validate": "node --import tsx scripts/validate.ts",
     "db:status": "node --import tsx scripts/db-status.ts",
     "db:import": "node --import tsx scripts/db-import.ts",
+    "household": "node --import tsx scripts/household.ts",
     "generate-plan": "node --import tsx scripts/generate-plan.ts"
   },
   "dependencies": {

@@ -1,27 +1,44 @@
 import { RETIRED_RECIPES } from "@/data/recipes";
 import { DEFAULT_PLAN, DEFAULT_QUICK_DAYS } from "./constants";
 import { weekCost } from "./cost";
-import { planDates, weekDates, weekOf } from "./dates";
+import { addDays, mondayOf, planDates, todayISO, weekDates, weekOf } from "./dates";
 import { planLibrary } from "./exclusions";
 import { fitsSlot, generatePlan } from "./generator";
-import type { Library } from "./library";
-import { store } from "./store";
+import { CUSTOM_PREFIX, slugify, type Library } from "./library";
+import { HOME_HOUSEHOLD, store, type Household, type HouseholdStore } from "./store";
 import type { MealSlot, Plan, Recipe } from "./types";
 
-/** All plans plus the active one, creating the original plan the first time. */
-export async function loadPlans(): Promise<{ plans: Plan[]; active: Plan }> {
-  const [stored, activeId] = await Promise.all([store.getPlans(), store.getActivePlanId()]);
+/** The plan a household starts with: Road to Australia for the original household, a blank slate for others. */
+function starterPlan(household: Pick<Household, "id" | "name">): Plan {
+  const createdAt = new Date().toISOString();
+  if (household.id === HOME_HOUSEHOLD) return { ...DEFAULT_PLAN, createdAt };
+  const title = `${household.name} dinners`.slice(0, 60);
+  return {
+    ...DEFAULT_PLAN,
+    id: slugify(title).slice(CUSTOM_PREFIX.length) || "plan",
+    title,
+    startDate: mondayOf(addDays(todayISO(), 7)),
+    createdAt,
+  };
+}
+
+/** A household's plans plus the active one, creating its starter plan the first time. */
+export async function loadPlans(
+  hs: HouseholdStore,
+  household: Pick<Household, "id" | "name">,
+): Promise<{ plans: Plan[]; active: Plan }> {
+  const [stored, activeId] = await Promise.all([hs.getPlans(), hs.getActivePlanId()]);
   // Plans saved before quick nights were configurable used Monday to Wednesday.
   let plans = stored.map((p) => ({ ...p, quickDays: p.quickDays ?? DEFAULT_QUICK_DAYS }));
   if (!plans.length) {
-    const first: Plan = { ...DEFAULT_PLAN, createdAt: new Date().toISOString() };
-    await store.savePlan(first);
+    const first = starterPlan(household);
+    await hs.savePlan(first);
     plans = [first];
   }
   let active = plans.find((p) => p.id === activeId);
   if (!active) {
     active = plans[0];
-    await store.setActivePlanId(active.id);
+    await hs.setActivePlanId(active.id);
   }
   return { plans, active };
 }
@@ -33,17 +50,17 @@ export async function generateFullPlan(plan: Plan, library: Library, seed?: numb
 }
 
 /** Builds and saves every week of a plan from scratch. */
-export async function buildPlan(plan: Plan, library: Library, seed?: number) {
+export async function buildPlan(hs: HouseholdStore, plan: Plan, library: Library, seed?: number) {
   const slots = await generateFullPlan(plan, library, seed);
-  await store.replaceSlots(plan.id, planDates(plan), slots);
+  await hs.replaceSlots(plan.id, planDates(plan), slots);
   return slots;
 }
 
 /** Loads a plan's dinners, generating them the first time and repairing any that no longer fit. */
-export async function ensurePlanSlots(plan: Plan, library: Library): Promise<MealSlot[]> {
-  const slots = await store.getSlots(plan.id);
-  if (!slots.length) return buildPlan(plan, library);
-  return repairSlots(plan, slots, planLibrary(library, plan));
+export async function ensurePlanSlots(hs: HouseholdStore, plan: Plan, library: Library): Promise<MealSlot[]> {
+  const slots = await hs.getSlots(plan.id);
+  if (!slots.length) return buildPlan(hs, plan, library);
+  return repairSlots(hs, plan, slots, planLibrary(library, plan));
 }
 
 /**
@@ -51,7 +68,7 @@ export async function ensurePlanSlots(plan: Plan, library: Library): Promise<Mea
  * for a quick night, preferring the recipe's named successor and otherwise the least-planned recipe
  * that fits the slot and budget.
  */
-async function repairSlots(plan: Plan, slots: MealSlot[], library: Library): Promise<MealSlot[]> {
+async function repairSlots(hs: HouseholdStore, plan: Plan, slots: MealSlot[], library: Library): Promise<MealSlot[]> {
   const fits = (s: MealSlot) => {
     const r = library.bySlug[s.recipeSlug];
     return !!r && fitsSlot(r, s.role, s.date, plan.quickDays);
@@ -97,16 +114,22 @@ async function repairSlots(plan: Plan, slots: MealSlot[], library: Library): Pro
 
     counts.set(pick.slug, (counts.get(pick.slug) ?? 0) + 1);
     slot.recipeSlug = pick.slug;
-    await store.setSlotRecipe(plan.id, slot.date, pick.slug);
+    await hs.setSlotRecipe(plan.id, slot.date, pick.slug);
   }
   return repaired;
 }
 
 /** Regenerates the given weeks (0-based), keeping the rest of the plan for variety checks. */
-export async function regenerateWeeks(plan: Plan, weeks: number[], library: Library, seed = Date.now()) {
-  const [existing, prices] = await Promise.all([store.getSlots(plan.id), store.getPriceOverrides()]);
+export async function regenerateWeeks(
+  hs: HouseholdStore,
+  plan: Plan,
+  weeks: number[],
+  library: Library,
+  seed = Date.now(),
+) {
+  const [existing, prices] = await Promise.all([hs.getSlots(plan.id), store.getPriceOverrides()]);
   const fresh = generatePlan({ plan, weeks, existing, prices, seed, library: planLibrary(library, plan) });
-  await store.replaceSlots(plan.id, weeks.flatMap((w) => weekDates(plan, w)), fresh);
+  await hs.replaceSlots(plan.id, weeks.flatMap((w) => weekDates(plan, w)), fresh);
   return fresh;
 }
 

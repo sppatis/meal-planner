@@ -5,7 +5,7 @@ import { authRequired } from "@/lib/auth-token";
 import { loadCustom, loadPlanList } from "@/lib/data";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const [custom, { active }] = await Promise.all([loadCustom(), loadPlanList()]);
+  const [custom, { household, active }] = await Promise.all([loadCustom(), loadPlanList()]);
   return (
     <LibraryProvider recipes={custom.recipes} ingredients={custom.ingredients}>
       <header className="no-print sticky top-0 z-20 border-b border-stone-200 bg-white/90 backdrop-blur">
@@ -30,9 +30,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               Prices
             </Link>
             {authRequired() && (
-              <form action={logout}>
-                <button className="rounded-lg px-3 py-2 text-stone-500 hover:bg-stone-100 hover:text-stone-800">
-                  Sign out
+              <form action={logout} className="flex items-center">
+                <button
+                  className="rounded-lg px-3 py-2 text-stone-500 hover:bg-stone-100 hover:text-stone-800"
+                  title={`Signed in as ${household.name}`}
+                >
+                  <span className="hidden text-stone-400 sm:inline">{household.name} · </span>Sign out
                 </button>
               </form>
             )}

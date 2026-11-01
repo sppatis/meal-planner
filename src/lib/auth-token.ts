@@ -14,12 +14,14 @@ export function authRequired() {
   return isProduction() || !!process.env.HOUSEHOLD_PASSCODE;
 }
 
-/** Why sign-in can't work with the current settings, or null if it can. Production refuses to run unprotected. */
+/**
+ * Why sign-in can't work with the current environment, or null if it can. Production refuses to run
+ * unprotected. Whether any household has a passcode is checked separately, against the database.
+ */
 export function authConfigProblem(): string | null {
-  const passcode = process.env.HOUSEHOLD_PASSCODE ?? "";
   if (!authRequired()) return null;
-  if (!passcode) return "HOUSEHOLD_PASSCODE isn't set on the server.";
-  if (isProduction() && passcode.length < MIN_PASSCODE_LENGTH) {
+  const passcode = process.env.HOUSEHOLD_PASSCODE ?? "";
+  if (isProduction() && passcode && passcode.length < MIN_PASSCODE_LENGTH) {
     return `HOUSEHOLD_PASSCODE must be at least ${MIN_PASSCODE_LENGTH} characters.`;
   }
   if (isProduction() && (process.env.AUTH_SECRET ?? "").length < MIN_SECRET_LENGTH) {
@@ -48,28 +50,38 @@ function equal(a: string, b: string) {
   return diff === 0;
 }
 
-// The passcode is part of the signed message, so changing it (or AUTH_SECRET) signs every device out.
-const payload = (issuedAt: number) => `household:v2:${issuedAt}:${process.env.HOUSEHOLD_PASSCODE ?? ""}`;
-
-export async function createToken(now = Date.now()) {
-  const issuedAt = Math.floor(now / 1000);
-  return `${issuedAt}.${await hmac(payload(issuedAt))}`;
+export interface Session {
+  householdId: string;
+  /** The household's session version when the token was issued; a passcode reset bumps it. */
+  version: number;
+  /** Seconds since the token was issued. */
+  age: number;
 }
 
-/** Seconds since the token was issued, or null if it's missing, forged or expired. */
-export async function tokenAge(token: string | undefined, now = Date.now()): Promise<number | null> {
+const payload = (householdId: string, version: number, issuedAt: number) =>
+  `household:v3:${householdId}:${version}:${issuedAt}`;
+
+/** `householdId.version.issuedAt.signature`, signed with AUTH_SECRET. */
+export async function createToken(household: { id: string; sessionVersion: number }, now = Date.now()) {
+  const issuedAt = Math.floor(now / 1000);
+  const sig = await hmac(payload(household.id, household.sessionVersion, issuedAt));
+  return [household.id, household.sessionVersion, issuedAt, sig].join(".");
+}
+
+/**
+ * The session in a token, or null if it's missing, forged or expired. This only checks the signature: whether
+ * the household still exists with the same session version is checked against the database by currentHousehold().
+ */
+export async function readToken(token: string | undefined, now = Date.now()): Promise<Session | null> {
   if (!token || authConfigProblem()) return null;
-  const [issued, sig] = token.split(".");
-  const issuedAt = Number(issued);
-  if (!Number.isInteger(issuedAt) || !sig) return null;
+  const [householdId, versionText, issuedText, sig, ...rest] = token.split(".");
+  const version = Number(versionText);
+  const issuedAt = Number(issuedText);
+  if (!householdId || !Number.isInteger(version) || !Number.isInteger(issuedAt) || !sig || rest.length) return null;
   const age = Math.floor(now / 1000) - issuedAt;
   if (age < -60 || age > SESSION_SECONDS) return null;
-  return equal(sig, await hmac(payload(issuedAt))) ? age : null;
-}
-
-export async function isValidToken(token: string | undefined) {
-  if (!authRequired()) return true;
-  return (await tokenAge(token)) !== null;
+  if (!equal(sig, await hmac(payload(householdId, version, issuedAt)))) return null;
+  return { householdId, version, age };
 }
 
 export const cookieOptions = {

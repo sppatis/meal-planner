@@ -28,11 +28,11 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
   const { plan: planParam } = await searchParams;
   const plan = await findPlan(typeof planParam === "string" ? planParam : undefined);
   if (!plan || !(Number.isInteger(week) && week >= 0 && week < plan.weeks)) notFound();
-  const { active } = await loadPlanList();
+  const { hs, active } = await loadPlanList();
   const planHref = plan.id === active.id ? "/" : `/plans/${plan.id}`;
 
   const library = await loadLibrary();
-  const [slots, prices] = await Promise.all([ensurePlanSlots(plan, library), store.getPriceOverrides()]);
+  const [slots, prices] = await Promise.all([ensurePlanSlots(hs, plan, library), store.getPriceOverrides()]);
   const weekSlots = groupByWeek(plan, slots, library)[week];
   const recipes = weekSlots.map((s) => library.bySlug[s.recipeSlug]);
   const list = shoppingList(recipes, prices, library.ingredients);

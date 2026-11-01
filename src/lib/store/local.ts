@@ -4,16 +4,21 @@ import { randomUUID } from "crypto";
 import { DEFAULT_PLAN } from "@/lib/constants";
 import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
 import { photoUrl, removePhotoFile, savePhotoFile } from "./photo-files";
-import type { Store } from "./types";
+import { HOME_HOUSEHOLD, type Household, type HouseholdStore, type Store } from "./types";
 
-type StoredSlot = MealSlot & { planId: string };
+type StoredPlan = Plan & { householdId: string };
+type StoredSlot = MealSlot & { householdId: string; planId: string };
 
 export interface LocalDb {
-  plans: Plan[];
-  activePlanId: string | null;
+  households: Household[];
+  plans: StoredPlan[];
+  /** Active plan id by household. */
+  activePlanIds: Record<string, string>;
   slots: StoredSlot[];
-  ratings: Record<string, number>;
-  favourites: string[];
+  /** Stars by household, then recipe. */
+  ratings: Record<string, Record<string, number>>;
+  /** Favourite recipe slugs by household. */
+  favourites: Record<string, string[]>;
   photos: Photo[];
   prices: Record<string, number>;
   customRecipes: Recipe[];
@@ -23,31 +28,50 @@ export interface LocalDb {
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 
-const empty = (): LocalDb => ({
-  plans: [],
-  activePlanId: null,
-  slots: [],
-  ratings: {},
-  favourites: [],
-  photos: [],
-  prices: {},
-  customRecipes: [],
-  customIngredients: [],
+const homeHousehold = (): Household => ({
+  id: HOME_HOUSEHOLD,
+  name: "Home",
+  passcodeHash: null,
+  sessionVersion: 1,
+  createdAt: new Date(0).toISOString(),
 });
+
+/**
+ * Reads any version of db.json. Files saved before households existed had one set of plans, ratings and
+ * favourites, which now belong to the home household.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function normaliseLocalDb(raw: any): LocalDb {
+  const flatRatings = raw.ratings && Object.values(raw.ratings).some((v) => typeof v === "number");
+  return {
+    households: Array.isArray(raw.households) ? raw.households : [homeHousehold()],
+    plans: (raw.plans ?? []).map((p: StoredPlan) => ({ ...p, householdId: p.householdId ?? HOME_HOUSEHOLD })),
+    activePlanIds: raw.activePlanIds ?? (raw.activePlanId ? { [HOME_HOUSEHOLD]: raw.activePlanId } : {}),
+    slots: (raw.slots ?? []).map((s: StoredSlot) => ({
+      ...s,
+      householdId: s.householdId ?? HOME_HOUSEHOLD,
+      // Dinners saved before plans existed belong to the original plan.
+      planId: s.planId ?? DEFAULT_PLAN.id,
+    })),
+    ratings: flatRatings ? { [HOME_HOUSEHOLD]: raw.ratings } : (raw.ratings ?? {}),
+    favourites: Array.isArray(raw.favourites) ? { [HOME_HOUSEHOLD]: raw.favourites } : (raw.favourites ?? {}),
+    photos: raw.photos ?? [],
+    prices: raw.prices ?? {},
+    customRecipes: raw.customRecipes ?? [],
+    customIngredients: raw.customIngredients ?? [],
+  };
+}
 
 async function read(): Promise<LocalDb> {
   let text: string;
   try {
     text = await fs.readFile(DB_FILE, "utf8");
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return empty();
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return normaliseLocalDb({});
     throw error;
   }
-  // Any other failure must throw: falling back to empty() here would let the next write wipe the file.
-  const db: LocalDb = { ...empty(), ...JSON.parse(text) };
-  // Dinners saved before plans existed belong to the original plan.
-  for (const s of db.slots) s.planId ??= DEFAULT_PLAN.id;
-  return db;
+  // Any other failure must throw: falling back to an empty database here would let the next write wipe the file.
+  return normaliseLocalDb(JSON.parse(text));
 }
 
 async function write(db: LocalDb) {
@@ -69,69 +93,110 @@ function update(fn: (db: LocalDb) => void): Promise<void> {
   return run;
 }
 
+function stripPlan(stored: StoredPlan): Plan {
+  const plan: Partial<StoredPlan> = { ...stored };
+  delete plan.householdId;
+  return plan as Plan;
+}
+
+function householdStore(h: string): HouseholdStore {
+  return {
+    householdId: h,
+
+    async getPlans() {
+      return (await read()).plans
+        .filter((p) => p.householdId === h)
+        .map(stripPlan)
+        .sort((a, b) => a.startDate.localeCompare(b.startDate));
+    },
+    async savePlan(plan) {
+      await update((db) => {
+        db.plans = [...db.plans.filter((p) => p.householdId !== h || p.id !== plan.id), { ...plan, householdId: h }];
+      });
+    },
+    async deletePlan(id) {
+      await update((db) => {
+        db.plans = db.plans.filter((p) => p.householdId !== h || p.id !== id);
+        db.slots = db.slots.filter((s) => s.householdId !== h || s.planId !== id);
+        if (db.activePlanIds[h] === id) delete db.activePlanIds[h];
+      });
+    },
+    async getActivePlanId() {
+      return (await read()).activePlanIds[h] ?? null;
+    },
+    async setActivePlanId(id) {
+      await update((db) => {
+        db.activePlanIds[h] = id;
+      });
+    },
+
+    async getSlots(planId) {
+      return (await read()).slots
+        .filter((s) => s.householdId === h && s.planId === planId)
+        .map(({ date, role, recipeSlug }) => ({ date, role, recipeSlug }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    },
+    async replaceSlots(planId, dates, slots) {
+      const drop = new Set(dates);
+      await update((db) => {
+        db.slots = [
+          ...db.slots.filter((s) => s.householdId !== h || s.planId !== planId || !drop.has(s.date)),
+          ...slots.map((s) => ({ ...s, householdId: h, planId })),
+        ];
+      });
+    },
+    async setSlotRecipe(planId, date, recipeSlug) {
+      await update((db) => {
+        const slot = db.slots.find((s) => s.householdId === h && s.planId === planId && s.date === date);
+        if (slot) slot.recipeSlug = recipeSlug;
+      });
+    },
+
+    async getRatings() {
+      return (await read()).ratings[h] ?? {};
+    },
+    async setRating(recipeSlug, stars) {
+      await update((db) => {
+        db.ratings[h] = { ...db.ratings[h], [recipeSlug]: stars };
+      });
+    },
+
+    async getFavourites() {
+      return (await read()).favourites[h] ?? [];
+    },
+    async setFavourite(recipeSlug, favourite) {
+      await update((db) => {
+        const list = (db.favourites[h] ?? []).filter((s) => s !== recipeSlug);
+        db.favourites[h] = favourite ? [...list, recipeSlug] : list;
+      });
+    },
+  };
+}
+
 export const localStore: Store = {
-  async getPlans() {
-    return (await read()).plans.sort((a, b) => a.startDate.localeCompare(b.startDate));
-  },
-  async savePlan(plan) {
-    await update((db) => {
-      db.plans = [...db.plans.filter((p) => p.id !== plan.id), plan];
-    });
-  },
-  async deletePlan(id) {
-    await update((db) => {
-      db.plans = db.plans.filter((p) => p.id !== id);
-      db.slots = db.slots.filter((s) => s.planId !== id);
-      if (db.activePlanId === id) db.activePlanId = null;
-    });
-  },
-  async getActivePlanId() {
-    return (await read()).activePlanId;
-  },
-  async setActivePlanId(id) {
-    await update((db) => {
-      db.activePlanId = id;
-    });
-  },
+  forHousehold: householdStore,
 
-  async getSlots(planId) {
-    return (await read()).slots
-      .filter((s) => s.planId === planId)
-      .map(({ date, role, recipeSlug }) => ({ date, role, recipeSlug }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+  async listHouseholds() {
+    return (await read()).households;
   },
-  async replaceSlots(planId, dates, slots) {
-    const drop = new Set(dates);
+  async getHousehold(id) {
+    return (await read()).households.find((h) => h.id === id) ?? null;
+  },
+  async saveHousehold(household) {
     await update((db) => {
-      db.slots = [
-        ...db.slots.filter((s) => s.planId !== planId || !drop.has(s.date)),
-        ...slots.map((s) => ({ ...s, planId })),
-      ];
+      const i = db.households.findIndex((h) => h.id === household.id);
+      if (i >= 0) db.households[i] = { ...household, createdAt: db.households[i].createdAt };
+      else db.households.push(household);
     });
   },
-  async setSlotRecipe(planId, date, recipeSlug) {
+  async deleteHousehold(id) {
     await update((db) => {
-      const slot = db.slots.find((s) => s.planId === planId && s.date === date);
-      if (slot) slot.recipeSlug = recipeSlug;
-    });
-  },
-
-  async getRatings() {
-    return (await read()).ratings;
-  },
-  async setRating(recipeSlug, stars) {
-    await update((db) => {
-      db.ratings[recipeSlug] = stars;
-    });
-  },
-
-  async getFavourites() {
-    return (await read()).favourites;
-  },
-  async setFavourite(recipeSlug, favourite) {
-    await update((db) => {
-      db.favourites = db.favourites.filter((s) => s !== recipeSlug);
-      if (favourite) db.favourites.push(recipeSlug);
+      db.households = db.households.filter((h) => h.id !== id);
+      db.plans = db.plans.filter((p) => p.householdId !== id);
+      db.slots = db.slots.filter((s) => s.householdId !== id);
+      delete db.activePlanIds[id];
+      delete db.ratings[id];
+      delete db.favourites[id];
     });
   },
 

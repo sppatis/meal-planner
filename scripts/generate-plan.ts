@@ -5,6 +5,7 @@
  *   npm run generate-plan -- --dry-run    # print a plan without saving
  *   npm run generate-plan -- --seed 42    # reproducible shuffle
  *   npm run generate-plan -- --plan my-id # a plan other than the active one
+ *   npm run generate-plan -- --household smith-family   # another household's plans (default: home)
  */
 import { existsSync } from "fs";
 
@@ -23,9 +24,14 @@ async function main() {
   const { generatePlan } = await import("../src/lib/generator");
   const { buildLibrary } = await import("../src/lib/library");
   const { nutritionPerServing } = await import("../src/lib/nutrition");
-  const { store, storeName } = await import("../src/lib/store");
+  const { HOME_HOUSEHOLD, store, storeName } = await import("../src/lib/store");
 
-  const { plans, active } = await loadPlans();
+  const householdId = values("household")[0] ?? HOME_HOUSEHOLD;
+  const household = await store.getHousehold(householdId);
+  if (!household) throw new Error(`No household "${householdId}". Run npm run household -- list.`);
+  const hs = store.forHousehold(household.id);
+  const { plans, active } = await loadPlans(hs, household);
+  console.log(`Household: ${household.name} (${household.id})`);
   const planId = values("plan")[0];
   const plan = planId ? plans.find((p) => p.id === planId) : active;
   if (!plan) throw new Error(`No plan "${planId}". Plans: ${plans.map((p) => p.id).join(", ")}`);
@@ -37,7 +43,7 @@ async function main() {
   const seed = seedArg ? Number(seedArg) : weeks.length ? Date.now() : undefined;
 
   const [existing, prices, customRecipes, customIngredients] = await Promise.all([
-    store.getSlots(plan.id),
+    hs.getSlots(plan.id),
     store.getPriceOverrides(),
     store.getCustomRecipes(),
     store.getCustomIngredients(),
@@ -71,7 +77,7 @@ async function main() {
   const dates = (weeks.length ? weeks : Array.from({ length: plan.weeks }, (_, i) => i)).flatMap((w) =>
     weekDates(plan, w),
   );
-  await store.replaceSlots(plan.id, dates, slotsOut);
+  await hs.replaceSlots(plan.id, dates, slotsOut);
   console.log(`\nSaved ${slotsOut.length} dinners to ${storeName}.`);
 }
 

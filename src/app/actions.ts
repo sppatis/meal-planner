@@ -1,15 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
 import { CATEGORY_LABELS, MAX_PLAN_WEEKS } from "@/lib/constants";
 import { AISLE_ORDER } from "@/lib/cost";
-import { findPlan, loadLibrary } from "@/lib/data";
+import { findPlan, loadLibrary, loadPlanList } from "@/lib/data";
 import { mondayOf, parseISO, planDates, weekOf } from "@/lib/dates";
 import { normaliseTerm } from "@/lib/exclusions";
 import { PlanGenerationError } from "@/lib/generator";
 import { buildLibrary, CUSTOM_PREFIX, slugify } from "@/lib/library";
-import { ensurePlanSlots, generateFullPlan, loadPlans, regenerateWeeks } from "@/lib/plan";
+import { householdStore, requireHousehold } from "@/lib/household";
+import { ensurePlanSlots, generateFullPlan, regenerateWeeks } from "@/lib/plan";
 import { store } from "@/lib/store";
 import type { Aisle, Category, Ingredient, MealSlot, Plan, Protein, Recipe, Unit } from "@/lib/types";
 import { ingredientProblems, recipeProblems } from "@/lib/validate";
@@ -29,35 +29,34 @@ async function requirePlan(planId: string) {
 }
 
 export async function replaceSlot(planId: string, date: string, recipeSlug: string) {
-  await requireAuth();
+  const hs = await householdStore();
   const plan = await requirePlan(planId);
   await assertRecipe(recipeSlug);
   if (weekOf(plan, date) === null) throw new Error("Date is outside the plan");
-  await store.setSlotRecipe(plan.id, date, recipeSlug);
+  await hs.setSlotRecipe(plan.id, date, recipeSlug);
   refreshAll();
 }
 
 export async function regenerateWeek(planId: string, week: number) {
-  await requireAuth();
+  const hs = await householdStore();
   const plan = await requirePlan(planId);
   if (!(Number.isInteger(week) && week >= 0 && week < plan.weeks)) throw new Error("Invalid week");
-  await regenerateWeeks(plan, [week], await loadLibrary());
+  await regenerateWeeks(hs, plan, [week], await loadLibrary());
   refreshAll();
 }
 
 export async function setActivePlan(planId: string) {
-  await requireAuth();
+  const hs = await householdStore();
   await requirePlan(planId);
-  await store.setActivePlanId(planId);
+  await hs.setActivePlanId(planId);
   refreshAll();
 }
 
 export async function deletePlan(planId: string) {
-  await requireAuth();
-  const { plans, active } = await loadPlans();
+  const { hs, plans, active } = await loadPlanList();
   if (!plans.some((p) => p.id === planId)) throw new Error("Unknown plan");
   if (active.id === planId) throw new Error("Make another plan active before deleting this one");
-  await store.deletePlan(planId);
+  await hs.deletePlan(planId);
   refreshAll();
 }
 
@@ -78,9 +77,8 @@ export interface PlanDraft {
 export type SavePlanResult = { ok: true; id: string; active: boolean } | { ok: false; errors: string[] };
 
 export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
-  await requireAuth();
+  const { hs, plans, active } = await loadPlanList();
   const errors: string[] = [];
-  const { plans, active } = await loadPlans();
   const existing = draft.id ? plans.find((p) => p.id === draft.id) : undefined;
   if (draft.id && !existing) return { ok: false, errors: ["That plan no longer exists"] };
 
@@ -134,39 +132,39 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
       throw err;
     }
   }
-  await store.savePlan(plan);
+  await hs.savePlan(plan);
   if (slots) {
     const dates = new Set([...planDates(plan), ...(existing ? planDates(existing) : [])]);
-    await store.replaceSlots(plan.id, [...dates], slots);
+    await hs.replaceSlots(plan.id, [...dates], slots);
   } else {
     // Keep the dinners and only swap out ones that are now excluded or too slow for a quick night.
-    await ensurePlanSlots(plan, library);
+    await ensurePlanSlots(hs, plan, library);
   }
   const makeActive = draft.makeActive || active.id === plan.id;
-  if (makeActive) await store.setActivePlanId(plan.id);
+  if (makeActive) await hs.setActivePlanId(plan.id);
   refreshAll();
   return { ok: true, id: plan.id, active: makeActive };
 }
 
 export async function setRating(recipeSlug: string, stars: number) {
-  await requireAuth();
+  const hs = await householdStore();
   await assertRecipe(recipeSlug);
   if (!(Number.isInteger(stars) && stars >= 1 && stars <= 5)) throw new Error("Rating must be 1-5");
-  await store.setRating(recipeSlug, stars);
+  await hs.setRating(recipeSlug, stars);
   refreshAll();
 }
 
 export async function setFavourite(recipeSlug: string, favourite: boolean) {
-  await requireAuth();
+  const hs = await householdStore();
   await assertRecipe(recipeSlug);
-  await store.setFavourite(recipeSlug, favourite);
+  await hs.setFavourite(recipeSlug, favourite);
   refreshAll();
 }
 
 const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
 
 export async function uploadPhoto(formData: FormData) {
-  await requireAuth();
+  await requireHousehold();
   const recipeSlug = String(formData.get("recipeSlug"));
   const file = formData.get("photo");
   await assertRecipe(recipeSlug);
@@ -177,13 +175,13 @@ export async function uploadPhoto(formData: FormData) {
 }
 
 export async function deletePhoto(id: string) {
-  await requireAuth();
+  await requireHousehold();
   await store.deletePhoto(id);
   refreshAll();
 }
 
 export async function setPrice(ingredientId: string, price: number | null) {
-  await requireAuth();
+  await requireHousehold();
   if (!(await loadLibrary()).ingredients[ingredientId]) throw new Error("Unknown ingredient");
   if (price !== null && !(Number.isFinite(price) && price >= 0 && price < 100)) throw new Error("Invalid price");
   await store.setPriceOverride(ingredientId, price === null ? null : Math.round(price * 100) / 100);
@@ -256,7 +254,7 @@ function cleanIngredient(raw: Ingredient, errors: string[]): Ingredient | null {
 }
 
 export async function saveRecipe(draft: RecipeDraft): Promise<SaveRecipeResult> {
-  await requireAuth();
+  await requireHousehold();
   const errors: string[] = [];
   const library = await loadLibrary();
 
@@ -320,16 +318,13 @@ export async function saveRecipe(draft: RecipeDraft): Promise<SaveRecipeResult> 
 }
 
 export async function deleteRecipe(slug: string) {
-  await requireAuth();
+  const { hs, plans } = await loadPlanList();
   const library = await loadLibrary();
   if (!library.bySlug[slug]?.custom) throw new Error("Only your own recipes can be deleted");
   await store.deleteCustomRecipe(slug);
-  const [recipes, ingredients, { plans }] = await Promise.all([
-    store.getCustomRecipes(),
-    store.getCustomIngredients(),
-    loadPlans(),
-  ]);
+  const [recipes, ingredients] = await Promise.all([store.getCustomRecipes(), store.getCustomIngredients()]);
+  // Other households' plans are repaired the next time they're opened.
   const remaining = buildLibrary(recipes, ingredients);
-  for (const plan of plans) await ensurePlanSlots(plan, remaining);
+  for (const plan of plans) await ensurePlanSlots(hs, plan, remaining);
   refreshAll();
 }

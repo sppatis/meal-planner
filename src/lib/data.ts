@@ -1,6 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { cache } from "react";
+import { requireHousehold } from "./household";
 import { buildLibrary } from "./library";
 import { ensurePlanSlots, loadPlans } from "./plan";
 import { store } from "./store";
@@ -20,9 +21,12 @@ export const loadLibrary = cache(async () => {
   return buildLibrary(recipes, ingredients);
 });
 
+/** The signed-in household with its store, plans and active plan. */
 export const loadPlanList = cache(async () => {
   await connection();
-  return loadPlans();
+  const household = await requireHousehold();
+  const hs = store.forHousehold(household.id);
+  return { household, hs, ...(await loadPlans(hs, household)) };
 });
 
 /** A plan by id, or the active plan when no id is given. */
@@ -33,12 +37,12 @@ export async function findPlan(id?: string): Promise<Plan | undefined> {
 
 export async function loadAppData(plan?: Plan) {
   const library = await loadLibrary();
-  const { active } = await loadPlanList();
+  const { hs, active } = await loadPlanList();
   const current = plan ?? active;
   const [slots, ratings, manualFavourites, photos, prices] = await Promise.all([
-    ensurePlanSlots(current, library),
-    store.getRatings(),
-    store.getFavourites(),
+    ensurePlanSlots(hs, current, library),
+    hs.getRatings(),
+    hs.getFavourites(),
     store.getPhotos(),
     store.getPriceOverrides(),
   ]);

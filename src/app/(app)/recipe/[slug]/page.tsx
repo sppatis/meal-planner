@@ -28,17 +28,17 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const { slug } = await params;
   const { date, plan: planParam } = await searchParams;
   const library = await loadLibrary();
-  const { active } = await loadPlanList();
+  const { hs, active } = await loadPlanList();
   const plan = (typeof planParam === "string" ? await findPlan(planParam) : undefined) ?? active;
   const recipe = library.bySlug[slug];
   if (!recipe) notFound();
 
   const [ratings, favourites, photos, prices, slots, base] = await Promise.all([
-    store.getRatings(),
-    store.getFavourites(),
+    hs.getRatings(),
+    hs.getFavourites(),
     store.getPhotos(slug),
     store.getPriceOverrides(),
-    store.getSlots(plan.id),
+    hs.getSlots(plan.id),
     siteUrl(),
   ]);
 

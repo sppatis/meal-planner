@@ -25,7 +25,7 @@ export default async function ShareRecipePage({ params }: PageProps<"/share/reci
   const recipe = library.bySlug[slug];
   if (!recipe) notFound();
 
-  const [photos, ratings, base] = await Promise.all([store.getPhotos(slug), store.getRatings(), siteUrl()]);
+  const [photos, base] = await Promise.all([store.getPhotos(slug), siteUrl()]);
   const n = nutritionPerServing(recipe, library.ingredients);
   const lines = recipeLines(recipe, library.ingredients);
   const photoUrls = photos.map((p) => (p.url.startsWith("http") ? p.url : `${base}${p.url}`));
@@ -54,9 +54,6 @@ export default async function ShareRecipePage({ params }: PageProps<"/share/reci
       fatContent: `${n.fat} g`,
       fiberContent: `${n.fibre} g`,
     },
-    ...(ratings[slug]
-      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: ratings[slug], ratingCount: 1, bestRating: 5 } }
-      : {}),
   };
 
   return (

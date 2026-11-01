@@ -44,14 +44,41 @@ Without `DATABASE_URL`, data is stored in `.data/db.json` and photos in `.data/p
 
 ## Signing in
 
-There's one shared household passcode and no accounts.
+Each household has its own passcode and there are no accounts. Everyone types their passcode into the same box,
+and the passcode decides which household they're signed into.
 
-- In production the site won't open at all until `HOUSEHOLD_PASSCODE` (at least 12 characters; a few random words
-  is easiest to type on a phone) and `AUTH_SECRET` (at least 32 random characters) are set. The login page says
-  which one is missing.
+- **Private to each household:** plans, dinners, ratings, favourites and which plan is active. Another household's
+  plan addresses just show "not found".
+- **Shared by everyone:** your own recipes and ingredients, photos and Tesco price changes. Any household can edit
+  or delete them; plans using a deleted recipe get a substitute the next time they're opened.
+- The household's name is shown next to **Sign out** in the top bar.
+
+Manage households from any machine that can reach the database (add `DATABASE_URL=...` in front, as with
+`db:status`):
+
+```bash
+npm run household -- list
+npm run household -- add "24 Smith family"                 # suggests a four-word passcode, shown once
+npm run household -- add "Jones family" --passcode "..."   # or choose one (at least 12 characters)
+npm run household -- passcode <id>                         # reset; signs only that household's devices out
+npm run household -- rename <id> "New name"
+npm run household -- remove <id> --yes                     # deletes its plans, dinners, ratings and favourites
+```
+
+Passcodes are stored only as scrypt hashes, and two households can't share one. A passcode can include the house
+number to make it memorable, but the app doesn't read anything from it.
+
+The original household is `home` and owns everything saved before households existed. Until it has a passcode of
+its own, `HOUSEHOLD_PASSCODE` signs into it. Set one with `npm run household -- passcode home`, after which
+`HOUSEHOLD_PASSCODE` does nothing and can be removed. New households start with a "<name> dinners" plan from next
+Monday, which they can edit.
+
+- In production the site won't open until `AUTH_SECRET` (at least 32 random characters) is set and at least one
+  household can sign in. The login page says what's missing.
 - After 5 wrong passcodes a device is locked out for 15 minutes, and every wrong guess is slowed down.
-- Signing in lasts 90 days and renews while the device keeps using the site. **Sign out** is in the top bar.
-- To sign every device out (for example after a lost phone), change `HOUSEHOLD_PASSCODE` or `AUTH_SECRET` and restart.
+- Signing in lasts 90 days and renews while the device keeps using the site.
+- To sign one household's devices out (for example after a lost phone), reset its passcode. Removing a household
+  signs its devices out too. Changing `AUTH_SECRET` signs everyone out.
 - Serve the site over HTTPS: the login cookie is only sent over secure connections in production.
 - The `/share/recipe/...` pages and recipe photos stay public so MyFitnessPal can read them. Photo addresses are
   random and can't be guessed.
@@ -66,6 +93,7 @@ npm run generate-plan -- --dry-run         # preview a fresh plan for the active
 npm run generate-plan                      # rebuild every week of the active plan (replaces swaps)
 npm run generate-plan -- --week 5          # rebuild just week 5
 npm run generate-plan -- --plan my-plan-id # work on another plan
+npm run generate-plan -- --household smith # another household's active plan (default: home)
 ```
 
 Road to Australia is created and planned automatically the first time the app loads.
@@ -76,8 +104,8 @@ Set `DATABASE_URL` and the app stores everything in PostgreSQL instead of `.data
 files, saved in `.data/photos/` under the app folder, so that folder must be on a persistent volume.
 
 1. Create an empty database and a role that owns it. The app creates and upgrades its own tables on first use.
-2. Give the app `HOUSEHOLD_PASSCODE`, `AUTH_SECRET`, `SITE_URL` and
-   `DATABASE_URL=postgresql://user:password@host:5432/dbname`.
+2. Give the app `AUTH_SECRET`, `SITE_URL` and `DATABASE_URL=postgresql://user:password@host:5432/dbname`, plus
+   `HOUSEHOLD_PASSCODE` until households have their own passcodes (see [Signing in](#signing-in)).
 3. Check the connection from any machine that can reach the database (for example through an SSH tunnel):
 
    ```bash
@@ -94,7 +122,8 @@ files, saved in `.data/photos/` under the app folder, so that folder must be on 
 
    Or skip the import: Road to Australia is planned automatically the first time the site loads.
 
-5. Open the site on each phone, enter the passcode and use "Add to Home Screen".
+5. Add the other households with `npm run household -- add "Name"` (same `DATABASE_URL=...` prefix).
+6. Open the site on each phone, enter the household's passcode and use "Add to Home Screen".
 
 The other scripts work against the live database the same way, e.g.
 `DATABASE_URL=... npm run generate-plan -- --week 5`.
@@ -111,4 +140,7 @@ The other scripts work against the live database the same way, e.g.
 - `src/lib/cost.ts`: budget maths (fresh items in whole packs, staples pro rata)
 - `src/lib/store/`: PostgreSQL and local JSON storage; `postgres-migrations.ts` holds the database schema
 - `src/proxy.ts`: passcode check on every page (Next.js 16's replacement for middleware)
-- `src/lib/auth-token.ts`: signed, expiring login cookie; `src/lib/login-limiter.ts`: wrong-passcode lockout
+- `src/lib/auth-token.ts`: signed, expiring login cookie naming the household; `src/lib/login-limiter.ts`:
+  wrong-passcode lockout
+- `src/lib/household.ts`: the signed-in household and its scoped store; `src/lib/passcode.ts`: passcode hashing
+  and matching; `scripts/household.ts`: adding and managing households

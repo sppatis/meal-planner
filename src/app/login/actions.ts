@@ -1,12 +1,12 @@
 "use server";
 
-import { createHash, timingSafeEqual } from "crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { AUTH_COOKIE, authConfigProblem, cookieOptions, createToken, safeNext } from "@/lib/auth-token";
+import { AUTH_COOKIE, cookieOptions, createToken, safeNext } from "@/lib/auth-token";
+import { signInProblem } from "@/lib/household";
 import { failureDelay, lockedFor, recordFailure, recordSuccess } from "@/lib/login-limiter";
-
-const digest = (s: string) => createHash("sha256").update(s).digest();
+import { matchHousehold } from "@/lib/passcode";
+import { store } from "@/lib/store";
 
 // Behind a reverse proxy, X-Real-IP and the last X-Forwarded-For entry are set by the proxy; earlier entries come from the client.
 async function clientId() {
@@ -15,7 +15,7 @@ async function clientId() {
 }
 
 export async function login(_prev: string | null, formData: FormData): Promise<string | null> {
-  const problem = authConfigProblem();
+  const problem = await signInProblem();
   if (problem) return `Sign-in isn't set up yet: ${problem}`;
 
   const client = await clientId();
@@ -23,14 +23,15 @@ export async function login(_prev: string | null, formData: FormData): Promise<s
   if (wait) return `Too many wrong tries. Try again in ${Math.ceil(wait / 60_000)} minutes.`;
 
   const passcode = String(formData.get("passcode") ?? "").trim();
-  if (!timingSafeEqual(digest(passcode), digest(process.env.HOUSEHOLD_PASSCODE ?? ""))) {
+  const household = await matchHousehold(passcode, await store.listHouseholds());
+  if (!household) {
     recordFailure(client);
     await new Promise((r) => setTimeout(r, failureDelay()));
     return "That passcode didn't match. Try again.";
   }
 
   recordSuccess(client);
-  (await cookies()).set(AUTH_COOKIE, await createToken(), cookieOptions);
+  (await cookies()).set(AUTH_COOKIE, await createToken(household), cookieOptions);
   redirect(safeNext(formData.get("next")));
 }
 

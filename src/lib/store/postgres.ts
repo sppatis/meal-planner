@@ -2,7 +2,7 @@ import postgres from "postgres";
 import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
 import { photoUrl, removePhotoFile, savePhotoFile } from "./photo-files";
 import { MIGRATIONS } from "./postgres-migrations";
-import type { Store } from "./types";
+import type { Household, HouseholdStore, Store } from "./types";
 
 /** Arbitrary constant so concurrent app instances don't migrate at the same time. */
 const MIGRATION_LOCK = 724_105_331;
@@ -60,78 +60,142 @@ const toPhoto = (row: PhotoRow): Photo => ({
   createdAt: row.created_at.toISOString(),
 });
 
-export const postgresStore: Store = {
-  async getPlans() {
-    const sql = await getSql();
-    const rows = await sql<{ data: Plan }[]>`select data from plans`;
-    return rows.map((r) => r.data).sort((a, b) => a.startDate.localeCompare(b.startDate));
-  },
-  async savePlan(plan) {
-    const sql = await getSql();
-    await sql`insert into plans (id, data) values (${plan.id}, ${sql.json(plan as never)})
-      on conflict (id) do update set data = excluded.data`;
-  },
-  async deletePlan(id) {
-    const sql = await getSql();
-    await sql.begin(async (tx) => {
-      await tx`delete from plans where id = ${id}`;
-      await tx`delete from settings where key = 'active_plan_id' and value = ${tx.json(id)}`;
-    });
-  },
-  async getActivePlanId() {
-    const sql = await getSql();
-    const [row] = await sql<{ value: string }[]>`select value from settings where key = 'active_plan_id'`;
-    return row?.value ?? null;
-  },
-  async setActivePlanId(id) {
-    const sql = await getSql();
-    await sql`insert into settings (key, value) values ('active_plan_id', ${sql.json(id)})
-      on conflict (key) do update set value = excluded.value`;
-  },
+function householdStore(h: string): HouseholdStore {
+  return {
+    householdId: h,
 
-  async getSlots(planId) {
-    const sql = await getSql();
-    const rows = await sql<{ date: string; role: MealSlot["role"]; recipe_slug: string }[]>`
-      select date::text as date, role, recipe_slug from meal_slots where plan_id = ${planId} order by date`;
-    return rows.map((r) => ({ date: r.date, role: r.role, recipeSlug: r.recipe_slug }));
-  },
-  async replaceSlots(planId, dates, slots) {
-    const sql = await getSql();
-    await sql.begin(async (tx) => {
-      if (dates.length) await tx`delete from meal_slots where plan_id = ${planId} and date = any(${dates}::date[])`;
-      if (slots.length) {
-        const rows = slots.map((s) => ({ plan_id: planId, date: s.date, role: s.role, recipe_slug: s.recipeSlug }));
-        await tx`insert into meal_slots ${tx(rows, "plan_id", "date", "role", "recipe_slug")}
-          on conflict (plan_id, date) do update set role = excluded.role, recipe_slug = excluded.recipe_slug`;
+    async getPlans() {
+      const sql = await getSql();
+      const rows = await sql<{ data: Plan }[]>`select data from plans where household_id = ${h}`;
+      return rows.map((r) => r.data).sort((a, b) => a.startDate.localeCompare(b.startDate));
+    },
+    async savePlan(plan) {
+      const sql = await getSql();
+      await sql`insert into plans (household_id, id, data) values (${h}, ${plan.id}, ${sql.json(plan as never)})
+        on conflict (household_id, id) do update set data = excluded.data`;
+    },
+    async deletePlan(id) {
+      const sql = await getSql();
+      await sql.begin(async (tx) => {
+        await tx`delete from plans where household_id = ${h} and id = ${id}`;
+        await tx`delete from settings
+          where household_id = ${h} and key = 'active_plan_id' and value = ${tx.json(id)}`;
+      });
+    },
+    async getActivePlanId() {
+      const sql = await getSql();
+      const [row] = await sql<{ value: string }[]>`
+        select value from settings where household_id = ${h} and key = 'active_plan_id'`;
+      return row?.value ?? null;
+    },
+    async setActivePlanId(id) {
+      const sql = await getSql();
+      await sql`insert into settings (household_id, key, value) values (${h}, 'active_plan_id', ${sql.json(id)})
+        on conflict (household_id, key) do update set value = excluded.value`;
+    },
+
+    async getSlots(planId) {
+      const sql = await getSql();
+      const rows = await sql<{ date: string; role: MealSlot["role"]; recipe_slug: string }[]>`
+        select date::text as date, role, recipe_slug from meal_slots
+        where household_id = ${h} and plan_id = ${planId} order by date`;
+      return rows.map((r) => ({ date: r.date, role: r.role, recipeSlug: r.recipe_slug }));
+    },
+    async replaceSlots(planId, dates, slots) {
+      const sql = await getSql();
+      await sql.begin(async (tx) => {
+        if (dates.length) {
+          await tx`delete from meal_slots
+            where household_id = ${h} and plan_id = ${planId} and date = any(${dates}::date[])`;
+        }
+        if (slots.length) {
+          const rows = slots.map((s) => ({
+            household_id: h,
+            plan_id: planId,
+            date: s.date,
+            role: s.role,
+            recipe_slug: s.recipeSlug,
+          }));
+          await tx`insert into meal_slots ${tx(rows, "household_id", "plan_id", "date", "role", "recipe_slug")}
+            on conflict (household_id, plan_id, date)
+            do update set role = excluded.role, recipe_slug = excluded.recipe_slug`;
+        }
+      });
+    },
+    async setSlotRecipe(planId, date, recipeSlug) {
+      const sql = await getSql();
+      await sql`update meal_slots set recipe_slug = ${recipeSlug}
+        where household_id = ${h} and plan_id = ${planId} and date = ${date}`;
+    },
+
+    async getRatings() {
+      const sql = await getSql();
+      const rows = await sql<{ recipe_slug: string; stars: number }[]>`
+        select recipe_slug, stars from ratings where household_id = ${h}`;
+      return Object.fromEntries(rows.map((r) => [r.recipe_slug, r.stars]));
+    },
+    async setRating(recipeSlug, stars) {
+      const sql = await getSql();
+      await sql`insert into ratings (household_id, recipe_slug, stars) values (${h}, ${recipeSlug}, ${stars})
+        on conflict (household_id, recipe_slug) do update set stars = excluded.stars, updated_at = now()`;
+    },
+
+    async getFavourites() {
+      const sql = await getSql();
+      const rows = await sql<{ recipe_slug: string }[]>`
+        select recipe_slug from favourites where household_id = ${h} order by created_at`;
+      return rows.map((r) => r.recipe_slug);
+    },
+    async setFavourite(recipeSlug, favourite) {
+      const sql = await getSql();
+      if (favourite) {
+        await sql`insert into favourites (household_id, recipe_slug) values (${h}, ${recipeSlug}) on conflict do nothing`;
+      } else {
+        await sql`delete from favourites where household_id = ${h} and recipe_slug = ${recipeSlug}`;
       }
-    });
-  },
-  async setSlotRecipe(planId, date, recipeSlug) {
-    const sql = await getSql();
-    await sql`update meal_slots set recipe_slug = ${recipeSlug} where plan_id = ${planId} and date = ${date}`;
-  },
+    },
+  };
+}
 
-  async getRatings() {
-    const sql = await getSql();
-    const rows = await sql<{ recipe_slug: string; stars: number }[]>`select recipe_slug, stars from ratings`;
-    return Object.fromEntries(rows.map((r) => [r.recipe_slug, r.stars]));
-  },
-  async setRating(recipeSlug, stars) {
-    const sql = await getSql();
-    await sql`insert into ratings (recipe_slug, stars) values (${recipeSlug}, ${stars})
-      on conflict (recipe_slug) do update set stars = excluded.stars, updated_at = now()`;
-  },
+interface HouseholdRow {
+  id: string;
+  name: string;
+  passcode_hash: string | null;
+  session_version: number;
+  created_at: Date;
+}
 
-  async getFavourites() {
+const toHousehold = (row: HouseholdRow): Household => ({
+  id: row.id,
+  name: row.name,
+  passcodeHash: row.passcode_hash,
+  sessionVersion: row.session_version,
+  createdAt: row.created_at.toISOString(),
+});
+
+export const postgresStore: Store = {
+  forHousehold: householdStore,
+
+  async listHouseholds() {
     const sql = await getSql();
-    return (await sql<{ recipe_slug: string }[]>`select recipe_slug from favourites order by created_at`).map(
-      (r) => r.recipe_slug,
-    );
+    return (await sql<HouseholdRow[]>`select * from households order by created_at, id`).map(toHousehold);
   },
-  async setFavourite(recipeSlug, favourite) {
+  async getHousehold(id) {
     const sql = await getSql();
-    if (favourite) await sql`insert into favourites (recipe_slug) values (${recipeSlug}) on conflict do nothing`;
-    else await sql`delete from favourites where recipe_slug = ${recipeSlug}`;
+    const [row] = await sql<HouseholdRow[]>`select * from households where id = ${id}`;
+    return row ? toHousehold(row) : null;
+  },
+  async saveHousehold(household) {
+    const sql = await getSql();
+    await sql`insert into households (id, name, passcode_hash, session_version, created_at)
+      values (${household.id}, ${household.name}, ${household.passcodeHash}, ${household.sessionVersion},
+        ${household.createdAt})
+      on conflict (id) do update set name = excluded.name, passcode_hash = excluded.passcode_hash,
+        session_version = excluded.session_version`;
+  },
+  async deleteHousehold(id) {
+    const sql = await getSql();
+    await sql`delete from households where id = ${id}`;
   },
 
   async getPhotos(recipeSlug) {

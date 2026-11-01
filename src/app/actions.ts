@@ -10,7 +10,9 @@ import { PlanGenerationError } from "@/lib/generator";
 import { buildLibrary, CUSTOM_PREFIX, slugify } from "@/lib/library";
 import { householdStore, requireHousehold } from "@/lib/household";
 import { ensurePlanSlots, generateFullPlan, regenerateWeeks } from "@/lib/plan";
+import { MAX_PEOPLE, MIN_PEOPLE } from "@/lib/scale";
 import { store } from "@/lib/store";
+import { isStoreId } from "@/lib/stores";
 import type { Aisle, Category, Ingredient, MealSlot, Plan, Protein, Recipe, Unit } from "@/lib/types";
 import { ingredientProblems, recipeProblems } from "@/lib/validate";
 
@@ -55,7 +57,7 @@ export async function setActivePlan(planId: string) {
 export async function deletePlan(planId: string) {
   const { hs, plans, active } = await loadPlanList();
   if (!plans.some((p) => p.id === planId)) throw new Error("Unknown plan");
-  if (active.id === planId) throw new Error("Make another plan active before deleting this one");
+  if (active?.id === planId) throw new Error("Make another plan active before deleting this one");
   await hs.deletePlan(planId);
   refreshAll();
 }
@@ -69,6 +71,8 @@ export interface PlanDraft {
   weeklyBudget: number;
   excluded: string[];
   quickDays: number[];
+  people: number;
+  store: string;
   makeActive: boolean;
   /** Rebuild every dinner. Always happens for new plans or when the dates change. */
   rebuild: boolean;
@@ -97,12 +101,18 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
   const quickDays = [
     ...new Set((Array.isArray(draft.quickDays) ? draft.quickDays : []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)),
   ].sort((a, b) => a - b);
+  const people = num(draft.people);
+  const storeId = draft.store;
 
   if (title.length < 2) errors.push("Give the plan a title");
   if (!startDate || Number.isNaN(parseISO(startDate).getTime())) errors.push("Choose a start date");
   if (!(weeks >= 1 && weeks <= MAX_PLAN_WEEKS)) errors.push(`The plan can run for 1 to ${MAX_PLAN_WEEKS} weeks`);
   if (!(weeklyBudget >= 10 && weeklyBudget <= 500)) errors.push("Set a weekly budget between £10 and £500");
-  if (errors.length) return { ok: false, errors };
+  if (!(Number.isInteger(people) && people >= MIN_PEOPLE && people <= MAX_PEOPLE)) {
+    errors.push(`The plan can feed ${MIN_PEOPLE} to ${MAX_PEOPLE} people`);
+  }
+  if (!isStoreId(storeId)) errors.push("Choose a supermarket");
+  if (errors.length || !isStoreId(storeId)) return { ok: false, errors };
 
   let id = existing?.id;
   if (!id) {
@@ -118,6 +128,8 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
     weeklyBudget,
     excluded,
     quickDays,
+    people,
+    store: storeId,
     createdAt: existing?.createdAt ?? new Date().toISOString(),
   };
 
@@ -140,7 +152,8 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
     // Keep the dinners and only swap out ones that are now excluded or too slow for a quick night.
     await ensurePlanSlots(hs, plan, library);
   }
-  const makeActive = draft.makeActive || active.id === plan.id;
+  // A household's first plan is always active, since there's nothing else to show.
+  const makeActive = draft.makeActive || !active || active.id === plan.id;
   if (makeActive) await hs.setActivePlanId(plan.id);
   refreshAll();
   return { ok: true, id: plan.id, active: makeActive };
@@ -180,11 +193,12 @@ export async function deletePhoto(id: string) {
   refreshAll();
 }
 
-export async function setPrice(ingredientId: string, price: number | null) {
+export async function setPrice(storeId: string, ingredientId: string, price: number | null) {
   await requireHousehold();
+  if (!isStoreId(storeId)) throw new Error("Unknown supermarket");
   if (!(await loadLibrary()).ingredients[ingredientId]) throw new Error("Unknown ingredient");
   if (price !== null && !(Number.isFinite(price) && price >= 0 && price < 100)) throw new Error("Invalid price");
-  await store.setPriceOverride(ingredientId, price === null ? null : Math.round(price * 100) / 100);
+  await store.setPriceOverride(storeId, ingredientId, price === null ? null : Math.round(price * 100) / 100);
   refreshAll();
 }
 

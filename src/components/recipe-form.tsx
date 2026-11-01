@@ -266,8 +266,9 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
         <section className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
           <h2 className="font-bold">Ingredients for {SERVINGS}</h2>
           <p className="mt-1 text-xs text-stone-500">
-            Pick from the Tesco catalogue so calories and prices work out automatically. If something&apos;s missing, add it
-            as a new ingredient.
+            Write the recipe for {SERVINGS} people; plans scale the amounts to however many they feed. Pick from the
+            catalogue so calories and prices work out automatically. If something&apos;s missing, add it as a new
+            ingredient.
           </p>
           <ul className="mt-4 space-y-3">
             {rows.map((row) => {
@@ -348,7 +349,8 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
             <div className="mt-5 space-y-3 rounded-xl bg-stone-50 p-4 ring-1 ring-stone-200">
               <h3 className="font-semibold">New ingredient</h3>
               <p className="text-xs text-stone-500">
-                Copy the details from the Tesco website or the pack. Nutrition comes from the label&apos;s
+                Copy the details from the Tesco website or the pack. Use Tesco&apos;s price if you can, as other
+                supermarkets&apos; prices are estimated from it. Nutrition comes from the label&apos;s
                 &quot;per 100g&quot; column (or per item for things counted individually).
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
@@ -483,7 +485,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
             <dd className="text-right font-medium">{n.carbs} g</dd>
             <dt className="text-stone-500">Fat</dt>
             <dd className="text-right font-medium">{n.fat} g</dd>
-            <dt className="text-stone-500">Cost for {SERVINGS}</dt>
+            <dt className="text-stone-500">Cost for {SERVINGS} at Tesco</dt>
             <dd className="text-right font-medium">{gbp(cost)}</dd>
             <dt className="text-stone-500">Total time</dt>
             <dd className="text-right font-medium">

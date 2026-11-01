@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <Link href="/" className="leading-tight">
             <span className="block text-[10px] font-semibold uppercase tracking-widest text-emerald-700">
-              {active.title}
+              {active?.title ?? household.name}
             </span>
             <span className="text-lg font-bold">Dinner Planner</span>
           </Link>

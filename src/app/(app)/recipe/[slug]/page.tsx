@@ -9,11 +9,14 @@ import { NutritionPanel } from "@/components/nutrition-panel";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { ShareBox } from "@/components/share-box";
 import { StarRating } from "@/components/stars";
-import { CATEGORY_LABELS, DAY_NAMES, SERVINGS } from "@/lib/constants";
-import { gbp, priceOf, recipeCost, tescoSearchUrl } from "@/lib/cost";
+import { CATEGORY_LABELS, DAY_NAMES } from "@/lib/constants";
+import { gbp, priceOf, recipeCost } from "@/lib/cost";
 import { dayIndex, formatDate, weekOf } from "@/lib/dates";
 import { EQUIPMENT_LABELS, equipmentFor } from "@/lib/equipment";
-import { findPlan, loadLibrary, loadPlanList } from "@/lib/data";
+import { findPlan, loadLibrary, loadPlanList, NO_PLAN_SETTINGS } from "@/lib/data";
+import { scaledLibrary } from "@/lib/exclusions";
+import { planPrices } from "@/lib/plan";
+import { storeName, storeSearchUrl } from "@/lib/stores";
 import { isQuick, nutritionPerServing } from "@/lib/nutrition";
 import { nutritionText, recipeLines } from "@/lib/recipe-view";
 import { siteUrl } from "@/lib/site";
@@ -27,9 +30,11 @@ export async function generateMetadata({ params }: PageProps<"/recipe/[slug]">):
 export default async function RecipePage({ params, searchParams }: PageProps<"/recipe/[slug]">) {
   const { slug } = await params;
   const { date, plan: planParam } = await searchParams;
-  const library = await loadLibrary();
+  const fullLibrary = await loadLibrary();
   const { hs, active } = await loadPlanList();
   const plan = (typeof planParam === "string" ? await findPlan(planParam) : undefined) ?? active;
+  const { people, store: shopId } = plan ?? NO_PLAN_SETTINGS;
+  const library = scaledLibrary(fullLibrary, people);
   const recipe = library.bySlug[slug];
   if (!recipe) notFound();
 
@@ -37,18 +42,19 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
     hs.getRatings(),
     hs.getFavourites(),
     store.getPhotos(slug),
-    store.getPriceOverrides(),
-    hs.getSlots(plan.id),
+    planPrices({ store: shopId }, library.ingredients),
+    plan ? hs.getSlots(plan.id) : [],
     siteUrl(),
   ]);
 
+  const shop = storeName(shopId);
   const n = nutritionPerServing(recipe, library.ingredients);
   const lines = recipeLines(recipe, library.ingredients);
-  const planDate = typeof date === "string" && weekOf(plan, date) !== null ? date : undefined;
-  const backWeek = planDate ? weekOf(plan, planDate)! + 1 : undefined;
-  const planHref = plan.id === active.id ? "/" : `/plans/${plan.id}`;
+  const planDate = plan && typeof date === "string" && weekOf(plan, date) !== null ? date : undefined;
+  const backWeek = plan && planDate ? weekOf(plan, planDate)! + 1 : undefined;
+  const planHref = !plan ? "/recipes" : plan.id === active?.id ? "/" : `/plans/${plan.id}`;
   const scheduled = slots.filter((s) => s.recipeSlug === slug).map((s) => s.date);
-  const quickNight = !!planDate && plan.quickDays.includes(dayIndex(planDate));
+  const quickNight = !!plan && !!planDate && plan.quickDays.includes(dayIndex(planDate));
   const equipment = equipmentFor(recipe);
 
   return (
@@ -57,7 +63,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
         href={backWeek ? `${planHref}#week-${backWeek}` : planHref}
         className="no-print mt-4 inline-block text-sm text-stone-500 hover:text-emerald-700"
       >
-        ← Back to {backWeek ? `week ${backWeek}` : "the plan"}
+        ← Back to {backWeek ? `week ${backWeek}` : plan ? "the plan" : "all recipes"}
       </Link>
 
       <header className="mt-3">
@@ -87,10 +93,10 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
             <b>{recipe.prepMins}</b> min prep · <b>{recipe.cookMins}</b> min cook
           </span>
           <span>
-            Serves <b>{SERVINGS}</b>
+            Serves <b>{people}</b>
           </span>
           <span>
-            About <b>{gbp(recipeCost(recipe, prices, library.ingredients))}</b> for 3
+            About <b>{gbp(recipeCost(recipe, prices, library.ingredients))}</b> for {people} at {shop}
           </span>
           {recipe.custom ? (
             <span className="flex items-center gap-2">
@@ -130,9 +136,9 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
               Dinners rated 4 stars or more become favourites you can swap in on the plan.
             </p>
           </div>
-          <NutritionPanel n={n} />
+          <NutritionPanel n={n} servings={people} />
           <ShareBox title={recipe.name} shareUrl={`${base}/share/recipe/${slug}`} nutritionText={nutritionText(recipe, library.ingredients)} />
-          {scheduled.length > 0 && (
+          {plan && scheduled.length > 0 && (
             <div className="rounded-2xl bg-white p-4 text-sm ring-1 ring-stone-200">
               <h2 className="font-semibold">On {plan.title}</h2>
               <ul className="mt-2 flex flex-wrap gap-2">
@@ -155,7 +161,9 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           <section>
             <div className="flex items-baseline justify-between">
               <h2 className="text-xl font-bold">Shopping list</h2>
-              <span className="text-xs text-stone-500">Tesco pack, est. price</span>
+              <span className="text-xs text-stone-500">
+                For {people} · {shop} pack, est. price
+              </span>
             </div>
             <div className="mt-2 rounded-2xl bg-white px-4 ring-1 ring-stone-200">
               <Checklist
@@ -167,9 +175,10 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
                     .filter(Boolean)
                     .join(" · "),
                   meta: gbp(priceOf(l.ingredient, prices)),
-                  href: tescoSearchUrl(l.ingredient),
+                  href: storeSearchUrl(shopId, l.ingredient),
                   warning: l.ingredient.checkLabel,
                 }))}
+                linkLabel={shop}
               />
             </div>
           </section>

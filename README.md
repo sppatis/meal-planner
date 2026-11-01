@@ -1,33 +1,41 @@
 # Dinner Planner
 
-Dinner plans for three adults. The first plan, **Road to Australia**, runs for 20 weeks (Mon 2 Nov 2026 to Sun 21 Mar
-2027), and you can add more.
+Dinner plans for any household size. The original plan, **Road to Australia**, feeds three for 20 weeks (Mon 2 Nov
+2026 to Sun 21 Mar 2027) at Tesco; you can add more plans with their own number of people and supermarket.
 
 - Every dinner is free of fish, shellfish and nuts, and under 1,000 kcal per person.
 - Each week has a rice dish, pasta dish, potato dish, veggie option, a Friday or Saturday fake-away, and 2 extras.
 - Each plan has its own quick nights (Monday to Wednesday by default), which get dinners ready in 25 minutes or less.
-- Each week stays within the plan's budget (£60 by default) at estimated Tesco prices.
+- Each plan chooses how many people it feeds (1–10) and where they shop. Recipe amounts, shopping lists and costs
+  scale to that headcount. Pack prices are estimated from the Tesco catalogue with a rough price level per
+  supermarket (Aldi cheaper, Waitrose dearer, and so on); you can correct any price per store.
 - Recipes give gas mark temperatures, and many have a Ninja Dual Zone air fryer method.
 
 ## Using the app
 
 - **Plan** (homepage): the active plan's weeks as cards. Tap a card for the recipe, or **Replace** to swap in a
-  favourite. The dialog shows the new weekly cost. **Shuffle week** regenerates a whole week.
-- **Plans**: every plan with its dates, budget and left-out ingredients. **New plan** asks for a title, start date
-  (weeks run Monday to Sunday), number of weeks, weekly budget, quick nights and any ingredients to leave out. Tap the
-  days that need a quick dinner. Type an ingredient and press Enter to add it; tap the × on its tag to remove it. The form shows which dinners will be left out before you
-  save, and every dinner is planned automatically. **Make active** puts a plan on the homepage. Other plans can be
-  viewed, edited or deleted. Changing a plan's dates re-plans it; changing the budget, quick nights or ingredients only
-  replaces the dinners that no longer fit, unless you tick **Re-plan every dinner**.
-- **Recipe page**: shopping list with Tesco links, method, Ninja method, photo upload, 5-star rating and favourite toggle.
-  Recipes rated 4 stars or more automatically become favourites.
-- **Our recipes**: on Recipes, tap **Add a recipe** to add your own. Pick ingredients from the Tesco catalogue (or add
-  a new one with its pack price and label nutrition) and the calories, cost, shopping list and MyFitnessPal page are
-  worked out the same way as the built-in recipes. Saving is blocked if it mentions fish or nuts or goes over 1,000 kcal.
-  Your recipes always appear as favourites in **Replace**, and can be edited or deleted from their page.
-- **Shopping list** (per week): combined list grouped by aisle, with a separate cupboard check for staples. Ticks are
-  remembered on each phone.
-- **Prices**: Tesco has no public price feed, so prices are estimates. Edit any price and every budget recalculates.
+  favourite. The dialog shows the new weekly cost. **Shuffle week** regenerates a whole week. A household with no
+  plan yet sees a **Start a new plan** button instead.
+- **Plans**: every plan with its dates, people, supermarket, budget and left-out ingredients. **New plan** asks for a
+  title, number of people, supermarket, start date (weeks run Monday to Sunday), number of weeks, weekly budget (about
+  £20 a head until you type your own), quick nights and any ingredients to leave out. Tap the days that need a quick
+  dinner. Type an ingredient and press Enter to add it; tap the × on its tag to remove it. The form shows which dinners
+  will be left out before you save, and every dinner is planned automatically. The first plan becomes active; **Make
+  active** puts a later plan on the homepage. Other plans can be viewed, edited or deleted. Changing a plan's dates
+  re-plans it; changing the budget, people, supermarket, quick nights or ingredients only replaces the dinners that no
+  longer fit, unless you tick **Re-plan every dinner**.
+- **Recipe page**: shopping list with links for the plan's supermarket, method, Ninja method, photo upload, 5-star
+  rating and favourite toggle. Recipes rated 4 stars or more automatically become favourites. Amounts and costs follow
+  the plan's number of people.
+- **Our recipes**: on Recipes, tap **Add a recipe** to add your own. Write ingredients for 3 people (plans scale them)
+  from the Tesco-priced catalogue (or add a new one with its pack price and label nutrition) and the calories, cost,
+  shopping list and MyFitnessPal page are worked out the same way as the built-in recipes. Saving is blocked if it
+  mentions fish or nuts or goes over 1,000 kcal. Your recipes always appear as favourites in **Replace**, and can be
+  edited or deleted from their page.
+- **Shopping list** (per week): combined list grouped by aisle, with a separate cupboard check for staples, scaled to
+  the plan's people and linked to its supermarket. Ticks are remembered on each phone.
+- **Prices**: pick a supermarket at the top (defaults to the active plan's). Pack prices are estimates; corrections are
+  saved per store and shared by every household. Edit any price and budgets at that store recalculate.
 - **MyFitnessPal**: on a recipe, tap **Copy link**. In MyFitnessPal go to Recipes, then Create a Recipe, then Add from
   web, paste the link, set servings to 3 and save. Each person logs 1 serving. **Copy nutrition** is there for Quick Add.
   The `/share/recipe/...` pages are public (no passcode) so MyFitnessPal can read them.
@@ -49,8 +57,8 @@ and the passcode decides which household they're signed into.
 
 - **Private to each household:** plans, dinners, ratings, favourites and which plan is active. Another household's
   plan addresses just show "not found".
-- **Shared by everyone:** your own recipes and ingredients, photos and Tesco price changes. Any household can edit
-  or delete them; plans using a deleted recipe get a substitute the next time they're opened.
+- **Shared by everyone:** your own recipes and ingredients, photos and price corrections (per supermarket). Any
+  household can edit or delete them; plans using a deleted recipe get a substitute the next time they're opened.
 - The household's name is shown next to **Sign out** in the top bar.
 
 Manage households from any machine that can reach the database (add `DATABASE_URL=...` in front, as with
@@ -70,8 +78,8 @@ number to make it memorable, but the app doesn't read anything from it.
 
 The original household is `home` and owns everything saved before households existed. Until it has a passcode of
 its own, `HOUSEHOLD_PASSCODE` signs into it. Set one with `npm run household -- passcode home`, after which
-`HOUSEHOLD_PASSCODE` does nothing and can be removed. New households start with a "<name> dinners" plan from next
-Monday, which they can edit.
+`HOUSEHOLD_PASSCODE` does nothing and can be removed. New households start with no plan and see **Start a new plan**
+on the homepage.
 
 - In production the site won't open until `AUTH_SECRET` (at least 32 random characters) is set and at least one
   household can sign in. The login page says what's missing.
@@ -96,8 +104,6 @@ npm run generate-plan -- --plan my-plan-id # work on another plan
 npm run generate-plan -- --household smith # another household's active plan (default: home)
 ```
 
-Road to Australia is created and planned automatically the first time the app loads.
-
 ## Going live on your own server (PostgreSQL)
 
 Set `DATABASE_URL` and the app stores everything in PostgreSQL instead of `.data/db.json`. Photos are still
@@ -120,7 +126,7 @@ files, saved in `.data/photos/` under the app folder, so that folder must be on 
    DATABASE_URL=postgresql://user:password@127.0.0.1:5432/dbname npm run db:import
    ```
 
-   Or skip the import: Road to Australia is planned automatically the first time the site loads.
+   Or skip the import and create plans in the app after signing in.
 
 5. Add the other households with `npm run household -- add "Name"` (same `DATABASE_URL=...` prefix).
 6. Open the site on each phone, enter the household's passcode and use "Add to Home Screen".
@@ -134,8 +140,10 @@ The other scripts work against the live database the same way, e.g.
 - `src/data/recipes/*.ts`: recipes by category; `air-fryer.ts` has the Ninja Dual Zone methods; `index.ts` maps
   removed recipes to their replacements so saved plans update themselves
 - `src/lib/library.ts`: combines the built-in recipes with your own
+- `src/lib/stores.ts`: UK supermarket list, price levels and product search links
+- `src/lib/scale.ts`: scaling recipe quantities to a plan's number of people
 - `src/lib/plan.ts`: creating, repairing and regenerating plans
-- `src/lib/exclusions.ts`: matching left-out ingredients against recipes
+- `src/lib/exclusions.ts`: matching left-out ingredients against recipes, and scaling the plan's recipe library
 - `src/lib/generator.ts`: the weekly planning rules
 - `src/lib/cost.ts`: budget maths (fresh items in whole packs, staples pro rata)
 - `src/lib/store/`: PostgreSQL and local JSON storage; `postgres-migrations.ts` holds the database schema

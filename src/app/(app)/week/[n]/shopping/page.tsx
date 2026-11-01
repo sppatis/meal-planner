@@ -6,12 +6,13 @@ import { Checklist } from "@/components/checklist";
 import { CopyButton } from "@/components/copy-button";
 import { PrintButton } from "@/components/print-button";
 import { DAY_NAMES } from "@/lib/constants";
-import { AISLE_ORDER, gbp, priceOf, shoppingList, tescoSearchUrl, type ShoppingLine } from "@/lib/cost";
+import { AISLE_ORDER, gbp, priceOf, shoppingList, type ShoppingLine } from "@/lib/cost";
 import { dayIndex, formatDate, weekDates } from "@/lib/dates";
+import { scaledLibrary } from "@/lib/exclusions";
 import { formatQty } from "@/lib/format";
 import { findPlan, loadLibrary, loadPlanList } from "@/lib/data";
-import { ensurePlanSlots, groupByWeek } from "@/lib/plan";
-import { store } from "@/lib/store";
+import { ensurePlanSlots, groupByWeek, planPrices } from "@/lib/plan";
+import { storeName, storeSearchUrl } from "@/lib/stores";
 
 export async function generateMetadata({ params }: PageProps<"/week/[n]/shopping">): Promise<Metadata> {
   return { title: `Week ${(await params).n} shopping list` };
@@ -29,10 +30,15 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
   const plan = await findPlan(typeof planParam === "string" ? planParam : undefined);
   if (!plan || !(Number.isInteger(week) && week >= 0 && week < plan.weeks)) notFound();
   const { hs, active } = await loadPlanList();
-  const planHref = plan.id === active.id ? "/" : `/plans/${plan.id}`;
+  const planHref = plan.id === active?.id ? "/" : `/plans/${plan.id}`;
+  const shop = storeName(plan.store);
 
-  const library = await loadLibrary();
-  const [slots, prices] = await Promise.all([ensurePlanSlots(hs, plan, library), store.getPriceOverrides()]);
+  const fullLibrary = await loadLibrary();
+  const [slots, prices] = await Promise.all([
+    ensurePlanSlots(hs, plan, fullLibrary),
+    planPrices(plan, fullLibrary.ingredients),
+  ]);
+  const library = scaledLibrary(fullLibrary, plan.people);
   const weekSlots = groupByWeek(plan, slots, library)[week];
   const recipes = weekSlots.map((s) => library.bySlug[s.recipeSlug]);
   const list = shoppingList(recipes, prices, library.ingredients);
@@ -62,7 +68,7 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
     primary: l.ingredient.name,
     secondary: `${packText(l)} · for ${l.usedIn.join(", ")}`,
     meta: l.packs === null ? `${gbp(l.cost)} share` : gbp(l.packs * priceOf(l.ingredient, prices)),
-    href: tescoSearchUrl(l.ingredient),
+    href: storeSearchUrl(plan.store, l.ingredient),
     warning: l.ingredient.checkLabel,
   });
 
@@ -73,7 +79,7 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
       </Link>
       <h1 className="mt-2 text-3xl font-bold">Week {week + 1} shopping list</h1>
       <p className="text-stone-500">
-        {plan.title} ·{" "}
+        {plan.title} · {plan.people} {plan.people === 1 ? "person" : "people"} ·{" "}
         {formatDate(dates[0], { weekday: "long", day: "numeric", month: "long" })} to{" "}
         {formatDate(dates[6], { weekday: "long", day: "numeric", month: "long" })}
       </p>
@@ -81,9 +87,9 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
       <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
         <BudgetBar cost={list.total} budget={plan.weeklyBudget} />
         <p className="mt-2 text-xs text-stone-500">
-          {gbp(list.freshTotal)} this week&apos;s shop plus {gbp(list.stapleTotal)} share of cupboard staples. Estimated Tesco prices,
+          {gbp(list.freshTotal)} this week&apos;s shop plus {gbp(list.stapleTotal)} share of cupboard staples. Estimated {shop} prices,
           which you can adjust on the{" "}
-          <Link href="/prices" className="text-emerald-700 underline">
+          <Link href={`/prices?store=${plan.store}`} className="text-emerald-700 underline">
             Prices
           </Link>{" "}
           page.
@@ -112,7 +118,7 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
         <section key={g.aisle} className="mt-6">
           <h2 className="text-sm font-bold uppercase tracking-wider text-stone-500">{g.aisle}</h2>
           <div className="mt-1 rounded-2xl bg-white px-4 ring-1 ring-stone-200">
-            <Checklist storageKey={`week-check:${week}:${g.aisle}`} items={g.lines.map(toItem)} />
+            <Checklist storageKey={`week-check:${week}:${g.aisle}`} items={g.lines.map(toItem)} linkLabel={shop} />
           </div>
         </section>
       ))}
@@ -123,7 +129,7 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
           Long-life items that last several weeks. Only top up what&apos;s running low.
         </p>
         <div className="mt-1 rounded-2xl bg-white px-4 ring-1 ring-stone-200">
-          <Checklist storageKey={`week-check:${week}:cupboard`} items={staples.map(toItem)} />
+          <Checklist storageKey={`week-check:${week}:cupboard`} items={staples.map(toItem)} linkLabel={shop} />
         </div>
       </section>
     </main>

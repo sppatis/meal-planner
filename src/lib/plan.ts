@@ -1,51 +1,51 @@
 import { RETIRED_RECIPES } from "@/data/recipes";
-import { DEFAULT_PLAN, DEFAULT_QUICK_DAYS } from "./constants";
-import { weekCost } from "./cost";
-import { addDays, mondayOf, planDates, todayISO, weekDates, weekOf } from "./dates";
+import { DEFAULT_QUICK_DAYS, SERVINGS } from "./constants";
+import { weekCost, type PriceOverrides } from "./cost";
+import { planDates, weekDates, weekOf } from "./dates";
 import { planLibrary } from "./exclusions";
 import { fitsSlot, generatePlan } from "./generator";
-import { CUSTOM_PREFIX, slugify, type Library } from "./library";
-import { HOME_HOUSEHOLD, store, type Household, type HouseholdStore } from "./store";
-import type { MealSlot, Plan, Recipe } from "./types";
+import type { Library } from "./library";
+import { store, type HouseholdStore } from "./store";
+import { DEFAULT_STORE, effectivePrices, isStoreId } from "./stores";
+import type { IngredientMap, MealSlot, Plan, Recipe } from "./types";
 
-/** The plan a household starts with: Road to Australia for the original household, a blank slate for others. */
-function starterPlan(household: Pick<Household, "id" | "name">): Plan {
-  const createdAt = new Date().toISOString();
-  if (household.id === HOME_HOUSEHOLD) return { ...DEFAULT_PLAN, createdAt };
-  const title = `${household.name} dinners`.slice(0, 60);
+/**
+ * Fills in settings added after a plan was saved: quick nights (Monday to Wednesday) and
+ * people and supermarket (3 at Tesco), which is how those plans were always planned.
+ */
+export function withPlanDefaults(plan: Partial<Plan> & Omit<Plan, "quickDays" | "people" | "store">): Plan {
   return {
-    ...DEFAULT_PLAN,
-    id: slugify(title).slice(CUSTOM_PREFIX.length) || "plan",
-    title,
-    startDate: mondayOf(addDays(todayISO(), 7)),
-    createdAt,
+    ...plan,
+    quickDays: plan.quickDays ?? DEFAULT_QUICK_DAYS,
+    people: plan.people ?? SERVINGS,
+    store: isStoreId(plan.store) ? plan.store : DEFAULT_STORE,
   };
 }
 
-/** A household's plans plus the active one, creating its starter plan the first time. */
-export async function loadPlans(
-  hs: HouseholdStore,
-  household: Pick<Household, "id" | "name">,
-): Promise<{ plans: Plan[]; active: Plan }> {
+/** A household's plans plus the active one. A new household has no plans and so no active plan. */
+export async function loadPlans(hs: HouseholdStore): Promise<{ plans: Plan[]; active: Plan | null }> {
   const [stored, activeId] = await Promise.all([hs.getPlans(), hs.getActivePlanId()]);
-  // Plans saved before quick nights were configurable used Monday to Wednesday.
-  let plans = stored.map((p) => ({ ...p, quickDays: p.quickDays ?? DEFAULT_QUICK_DAYS }));
-  if (!plans.length) {
-    const first = starterPlan(household);
-    await hs.savePlan(first);
-    plans = [first];
-  }
-  let active = plans.find((p) => p.id === activeId);
-  if (!active) {
+  const plans = stored.map(withPlanDefaults);
+  let active = plans.find((p) => p.id === activeId) ?? null;
+  if (!active && plans.length) {
     active = plans[0];
     await hs.setActivePlanId(active.id);
   }
   return { plans, active };
 }
 
+/** A price for every ingredient at the plan's supermarket, including shared corrections. */
+export async function planPrices(plan: Pick<Plan, "store">, ingredients: IngredientMap): Promise<PriceOverrides> {
+  const [corrections, tesco] = await Promise.all([
+    store.getPriceOverrides(plan.store),
+    plan.store === "tesco" ? undefined : store.getPriceOverrides("tesco"),
+  ]);
+  return effectivePrices(ingredients, plan.store, corrections, tesco);
+}
+
 /** Generates every week of a plan from scratch without saving. */
 export async function generateFullPlan(plan: Plan, library: Library, seed?: number) {
-  const prices = await store.getPriceOverrides();
+  const prices = await planPrices(plan, library.ingredients);
   return generatePlan({ plan, prices, library: planLibrary(library, plan), seed });
 }
 
@@ -75,7 +75,7 @@ async function repairSlots(hs: HouseholdStore, plan: Plan, slots: MealSlot[], li
   };
   if (slots.every(fits)) return slots;
 
-  const prices = await store.getPriceOverrides();
+  const prices = await planPrices(plan, library.ingredients);
   const budget = plan.weeklyBudget;
   const counts = new Map<string, number>();
   for (const s of slots) counts.set(s.recipeSlug, (counts.get(s.recipeSlug) ?? 0) + 1);
@@ -127,7 +127,7 @@ export async function regenerateWeeks(
   library: Library,
   seed = Date.now(),
 ) {
-  const [existing, prices] = await Promise.all([hs.getSlots(plan.id), store.getPriceOverrides()]);
+  const [existing, prices] = await Promise.all([hs.getSlots(plan.id), planPrices(plan, library.ingredients)]);
   const fresh = generatePlan({ plan, weeks, existing, prices, seed, library: planLibrary(library, plan) });
   await hs.replaceSlots(plan.id, weeks.flatMap((w) => weekDates(plan, w)), fresh);
   return fresh;

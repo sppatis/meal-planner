@@ -1,7 +1,7 @@
 import { KCAL_CAP, SERVINGS } from "@/lib/constants";
 import type { Nutrition } from "@/lib/types";
 
-export function NutritionPanel({ n }: { n: Nutrition }) {
+export function NutritionPanel({ n, servings = SERVINGS }: { n: Nutrition; servings?: number }) {
   const items = [
     ["Protein", n.protein],
     ["Carbs", n.carbs],
@@ -12,7 +12,7 @@ export function NutritionPanel({ n }: { n: Nutrition }) {
     <div className="rounded-2xl bg-white p-4 ring-1 ring-stone-200">
       <div className="flex items-baseline justify-between">
         <h2 className="font-semibold">Per serving</h2>
-        <span className="text-xs text-stone-500">Recipe serves {SERVINGS}</span>
+        <span className="text-xs text-stone-500">Recipe serves {servings}</span>
       </div>
       <p className="mt-2 text-3xl font-bold">
         {n.kcal} <span className="text-base font-medium text-stone-500">kcal</span>

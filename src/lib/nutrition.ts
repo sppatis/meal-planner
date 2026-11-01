@@ -6,8 +6,9 @@ function factor(ing: Ingredient, qty: number) {
   return ing.unit === "g" || ing.unit === "ml" ? qty / 100 : qty;
 }
 
-/** Nutrition for one of the 3 servings. */
+/** Nutrition for one serving, whether the recipe is written for 3 or scaled. */
 export function nutritionPerServing(recipe: Recipe, ingredients: IngredientMap = INGREDIENTS): Nutrition {
+  const servings = recipe.servings ?? SERVINGS;
   const total: Nutrition = { kcal: 0, protein: 0, carbs: 0, fat: 0, fibre: 0 };
   for (const line of recipe.ingredients) {
     const ing = ingredients[line.id];
@@ -20,11 +21,11 @@ export function nutritionPerServing(recipe: Recipe, ingredients: IngredientMap =
     total.fibre += ing.per.fibre * f;
   }
   return {
-    kcal: Math.round(total.kcal / SERVINGS),
-    protein: Math.round(total.protein / SERVINGS),
-    carbs: Math.round(total.carbs / SERVINGS),
-    fat: Math.round(total.fat / SERVINGS),
-    fibre: Math.round(total.fibre / SERVINGS),
+    kcal: Math.round(total.kcal / servings),
+    protein: Math.round(total.protein / servings),
+    carbs: Math.round(total.carbs / servings),
+    fat: Math.round(total.fat / servings),
+    fibre: Math.round(total.fibre / servings),
   };
 }
 

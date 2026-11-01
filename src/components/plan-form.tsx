@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useId, useMemo, useState, useTransition } from "react";
 import { savePlan, type PlanDraft } from "@/app/actions";
 import {
+  BUDGET_PER_PERSON,
   CATEGORY_LABELS,
   DAY_NAMES,
   DAY_SHORT,
@@ -12,10 +13,13 @@ import {
   DEFAULT_WEEKLY_BUDGET,
   MAX_PLAN_WEEKS,
   QUICK_MAX_MINS,
+  SERVINGS,
 } from "@/lib/constants";
 import { addDays, formatDate, listDays, mondayOf, todayISO } from "@/lib/dates";
 import { excludedBy, normaliseTerm } from "@/lib/exclusions";
 import { isQuick } from "@/lib/nutrition";
+import { MAX_PEOPLE, MIN_PEOPLE } from "@/lib/scale";
+import { DEFAULT_STORE, STORES, type StoreId } from "@/lib/stores";
 import type { Category, Plan } from "@/lib/types";
 import { useLibrary } from "./library-provider";
 
@@ -38,7 +42,11 @@ export function PlanForm({ plan, isActive = false }: Props) {
   const [title, setTitle] = useState(plan?.title ?? "");
   const [startDate, setStartDate] = useState(plan?.startDate ?? mondayOf(addDays(todayISO(), 7)));
   const [weeks, setWeeks] = useState(String(plan?.weeks ?? 12));
+  const [people, setPeople] = useState(String(plan?.people ?? SERVINGS));
+  const [shop, setShop] = useState<StoreId>(plan?.store ?? DEFAULT_STORE);
   const [budget, setBudget] = useState(String(plan?.weeklyBudget ?? DEFAULT_WEEKLY_BUDGET));
+  // A new plan's budget follows the number of people until it's typed in by hand.
+  const [budgetEdited, setBudgetEdited] = useState(!!plan);
   const [excluded, setExcluded] = useState<string[]>(plan?.excluded ?? []);
   const [term, setTerm] = useState("");
   const [quickDays, setQuickDays] = useState<number[]>(plan?.quickDays ?? DEFAULT_QUICK_DAYS);
@@ -101,6 +109,8 @@ export function PlanForm({ plan, isActive = false }: Props) {
       weeklyBudget: Number(budget),
       excluded: pendingTerm ? [...excluded, pendingTerm.toLowerCase()] : excluded,
       quickDays,
+      people: Number(people),
+      store: shop,
       makeActive,
       rebuild,
     };
@@ -142,6 +152,46 @@ export function PlanForm({ plan, isActive = false }: Props) {
             required
           />
         </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className={label} htmlFor="people">
+              Number of people
+            </label>
+            <input
+              id="people"
+              type="number"
+              min={MIN_PEOPLE}
+              max={MAX_PEOPLE}
+              step={1}
+              className={field}
+              value={people}
+              onChange={(e) => {
+                setPeople(e.target.value);
+                const n = Number(e.target.value);
+                if (!budgetEdited && Number.isInteger(n) && n >= MIN_PEOPLE && n <= MAX_PEOPLE) {
+                  setBudget(String(n * BUDGET_PER_PERSON));
+                }
+              }}
+              required
+            />
+          </div>
+          <div>
+            <label className={label} htmlFor="store">
+              Supermarket
+            </label>
+            <select id="store" className={field} value={shop} onChange={(e) => setShop(e.target.value as StoreId)}>
+              {STORES.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <p className="-mt-2 text-xs text-stone-500">
+          Recipe amounts, shopping lists and costs scale to the number of people. Prices and product links are for the
+          supermarket you choose.
+        </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className={label} htmlFor="start">
@@ -175,7 +225,10 @@ export function PlanForm({ plan, isActive = false }: Props) {
               step="0.5"
               className={field}
               value={budget}
-              onChange={(e) => setBudget(e.target.value)}
+              onChange={(e) => {
+                setBudget(e.target.value);
+                setBudgetEdited(true);
+              }}
               required
             />
           </div>
@@ -340,7 +393,8 @@ export function PlanForm({ plan, isActive = false }: Props) {
               </label>
               <p className="mt-1 pl-6 text-xs text-stone-500">
                 Otherwise your current dinners are kept, and only ones using a left-out ingredient or too slow for a
-                quick night are swapped. Tick this after changing the budget.
+                quick night are swapped. Tick this after changing the budget, number of people or supermarket, so the
+                dinners are chosen to fit the new weekly cost.
               </p>
             </>
           )}

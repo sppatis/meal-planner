@@ -14,6 +14,6 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
   const { plans, active } = await loadPlanList();
   const plan = plans.find((p) => p.id === id);
   if (!plan) notFound();
-  if (plan.id === active.id) redirect("/");
+  if (plan.id === active?.id) redirect("/");
   return <PlanView plan={plan} />;
 }

@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import { DEFAULT_PLAN } from "@/lib/constants";
+import { ORIGINAL_PLAN_ID } from "@/lib/constants";
 import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
 import { photoUrl, removePhotoFile, savePhotoFile } from "./photo-files";
 import { HOME_HOUSEHOLD, type Household, type HouseholdStore, type Store } from "./types";
@@ -20,7 +20,8 @@ export interface LocalDb {
   /** Favourite recipe slugs by household. */
   favourites: Record<string, string[]>;
   photos: Photo[];
-  prices: Record<string, number>;
+  /** Price corrections by supermarket, then ingredient. */
+  prices: Record<string, Record<string, number>>;
   customRecipes: Recipe[];
   customIngredients: Ingredient[];
 }
@@ -43,6 +44,8 @@ const homeHousehold = (): Household => ({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function normaliseLocalDb(raw: any): LocalDb {
   const flatRatings = raw.ratings && Object.values(raw.ratings).some((v) => typeof v === "number");
+  // Corrections saved before supermarkets were configurable were Tesco prices.
+  const flatPrices = raw.prices && Object.values(raw.prices).some((v) => typeof v === "number");
   return {
     households: Array.isArray(raw.households) ? raw.households : [homeHousehold()],
     plans: (raw.plans ?? []).map((p: StoredPlan) => ({ ...p, householdId: p.householdId ?? HOME_HOUSEHOLD })),
@@ -51,12 +54,12 @@ export function normaliseLocalDb(raw: any): LocalDb {
       ...s,
       householdId: s.householdId ?? HOME_HOUSEHOLD,
       // Dinners saved before plans existed belong to the original plan.
-      planId: s.planId ?? DEFAULT_PLAN.id,
+      planId: s.planId ?? ORIGINAL_PLAN_ID,
     })),
     ratings: flatRatings ? { [HOME_HOUSEHOLD]: raw.ratings } : (raw.ratings ?? {}),
     favourites: Array.isArray(raw.favourites) ? { [HOME_HOUSEHOLD]: raw.favourites } : (raw.favourites ?? {}),
     photos: raw.photos ?? [],
-    prices: raw.prices ?? {},
+    prices: flatPrices ? { tesco: raw.prices } : (raw.prices ?? {}),
     customRecipes: raw.customRecipes ?? [],
     customIngredients: raw.customIngredients ?? [],
   };
@@ -228,13 +231,14 @@ export const localStore: Store = {
     });
   },
 
-  async getPriceOverrides() {
-    return (await read()).prices;
+  async getPriceOverrides(storeId) {
+    return (await read()).prices[storeId] ?? {};
   },
-  async setPriceOverride(ingredientId, price) {
+  async setPriceOverride(storeId, ingredientId, price) {
     await update((db) => {
-      if (price === null) delete db.prices[ingredientId];
-      else db.prices[ingredientId] = price;
+      const prices = (db.prices[storeId] ??= {});
+      if (price === null) delete prices[ingredientId];
+      else prices[ingredientId] = price;
     });
   },
 

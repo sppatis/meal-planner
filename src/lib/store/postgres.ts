@@ -219,17 +219,18 @@ export const postgresStore: Store = {
     if (row) await removePhotoFile(row.file_name);
   },
 
-  async getPriceOverrides() {
+  async getPriceOverrides(storeId) {
     const sql = await getSql();
-    const rows = await sql<{ ingredient_id: string; price: string }[]>`select ingredient_id, price from price_overrides`;
+    const rows = await sql<{ ingredient_id: string; price: string }[]>`
+      select ingredient_id, price from price_overrides where store = ${storeId}`;
     return Object.fromEntries(rows.map((r) => [r.ingredient_id, Number(r.price)]));
   },
-  async setPriceOverride(ingredientId, price) {
+  async setPriceOverride(storeId, ingredientId, price) {
     const sql = await getSql();
-    if (price === null) await sql`delete from price_overrides where ingredient_id = ${ingredientId}`;
+    if (price === null) await sql`delete from price_overrides where store = ${storeId} and ingredient_id = ${ingredientId}`;
     else {
-      await sql`insert into price_overrides (ingredient_id, price) values (${ingredientId}, ${price})
-        on conflict (ingredient_id) do update set price = excluded.price`;
+      await sql`insert into price_overrides (store, ingredient_id, price) values (${storeId}, ${ingredientId}, ${price})
+        on conflict (store, ingredient_id) do update set price = excluded.price`;
     }
   },
 

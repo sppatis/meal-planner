@@ -20,7 +20,8 @@ async function main() {
   const { weekCost } = await import("../src/lib/cost");
   const { formatDate, weekDates, weekOf } = await import("../src/lib/dates");
   const { planLibrary } = await import("../src/lib/exclusions");
-  const { loadPlans } = await import("../src/lib/plan");
+  const { loadPlans, planPrices } = await import("../src/lib/plan");
+  const { storeName: supermarketName } = await import("../src/lib/stores");
   const { generatePlan } = await import("../src/lib/generator");
   const { buildLibrary } = await import("../src/lib/library");
   const { nutritionPerServing } = await import("../src/lib/nutrition");
@@ -30,32 +31,34 @@ async function main() {
   const household = await store.getHousehold(householdId);
   if (!household) throw new Error(`No household "${householdId}". Run npm run household -- list.`);
   const hs = store.forHousehold(household.id);
-  const { plans, active } = await loadPlans(hs, household);
+  const { plans, active } = await loadPlans(hs);
   console.log(`Household: ${household.name} (${household.id})`);
   const planId = values("plan")[0];
   const plan = planId ? plans.find((p) => p.id === planId) : active;
-  if (!plan) throw new Error(`No plan "${planId}". Plans: ${plans.map((p) => p.id).join(", ")}`);
-  console.log(`Plan: ${plan.title} (${plan.id})`);
+  if (!plan) {
+    throw new Error(plans.length ? `No plan "${planId}". Plans: ${plans.map((p) => p.id).join(", ")}` : "This household has no plans yet.");
+  }
+  console.log(`Plan: ${plan.title} (${plan.id}), ${plan.people} people at ${supermarketName(plan.store)}`);
 
   const weeks = values("week").map((w) => Number(w) - 1);
   if (weeks.some((w) => !(w >= 0 && w < plan.weeks))) throw new Error(`--week must be 1-${plan.weeks}`);
   const seedArg = values("seed")[0];
   const seed = seedArg ? Number(seedArg) : weeks.length ? Date.now() : undefined;
 
-  const [existing, prices, customRecipes, customIngredients] = await Promise.all([
+  const [existing, customRecipes, customIngredients] = await Promise.all([
     hs.getSlots(plan.id),
-    store.getPriceOverrides(),
     store.getCustomRecipes(),
     store.getCustomIngredients(),
   ]);
-  const library = buildLibrary(customRecipes, customIngredients);
+  const library = planLibrary(buildLibrary(customRecipes, customIngredients), plan);
+  const prices = await planPrices(plan, library.ingredients);
   const slotsOut = generatePlan({
     plan,
     weeks: weeks.length ? weeks : undefined,
     existing,
     prices,
     seed,
-    library: planLibrary(library, plan),
+    library,
   });
 
   const byWeek = new Map<number, typeof slotsOut>();

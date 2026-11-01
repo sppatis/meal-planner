@@ -95,4 +95,12 @@ export const MIGRATIONS: string[] = [
   alter table ratings add primary key (household_id, recipe_slug);
   alter table favourites add primary key (household_id, recipe_slug);
   `,
+
+  // 3: price corrections per supermarket. Corrections saved so far were Tesco prices.
+  `
+  alter table price_overrides drop constraint price_overrides_pkey;
+  alter table price_overrides add column store text not null default 'tesco';
+  alter table price_overrides alter column store drop default;
+  alter table price_overrides add primary key (store, ingredient_id);
+  `,
 ];

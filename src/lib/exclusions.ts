@@ -1,4 +1,6 @@
+import { SERVINGS } from "./constants";
 import type { Library } from "./library";
+import { scaleRecipe } from "./scale";
 import type { IngredientMap, Plan, Recipe } from "./types";
 
 /** Lower-cased, trimmed, with a trailing plural dropped so "mushrooms" also matches "mushroom". */
@@ -28,9 +30,17 @@ export function excludedBy(recipe: Recipe, terms: string[], ingredients: Ingredi
   });
 }
 
-/** The library restricted to recipes the plan allows. */
-export function planLibrary(library: Library, plan: Pick<Plan, "excluded">): Library {
-  if (!plan.excluded.length) return library;
-  const recipes = library.recipes.filter((r) => !excludedBy(r, plan.excluded, library.ingredients));
+/** The library restricted to recipes the plan allows, with quantities for the plan's number of people. */
+export function planLibrary(library: Library, plan: Pick<Plan, "excluded"> & Partial<Pick<Plan, "people">>): Library {
+  const people = plan.people ?? SERVINGS;
+  if (!plan.excluded.length && people === SERVINGS) return library;
+  const recipes = library.recipes
+    .filter((r) => !excludedBy(r, plan.excluded, library.ingredients))
+    .map((r) => scaleRecipe(r, people, library.ingredients));
   return { ...library, recipes, bySlug: Object.fromEntries(recipes.map((r) => [r.slug, r])) };
+}
+
+/** The whole library, scaled for a plan's people but without its exclusions (e.g. for browsing a recipe). */
+export function scaledLibrary(library: Library, people: number): Library {
+  return planLibrary(library, { excluded: [], people });
 }

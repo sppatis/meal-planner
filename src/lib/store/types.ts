@@ -1,3 +1,4 @@
+import type { StoreId } from "@/lib/stores";
 import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
 
 /** The household that owns everything saved before households existed. */
@@ -50,8 +51,9 @@ export interface Store {
   addPhoto(recipeSlug: string, file: File): Promise<Photo>;
   deletePhoto(id: string): Promise<void>;
 
-  getPriceOverrides(): Promise<Record<string, number>>;
-  setPriceOverride(ingredientId: string, price: number | null): Promise<void>;
+  /** Corrected pack prices at one supermarket, by ingredient id. */
+  getPriceOverrides(store: StoreId): Promise<Record<string, number>>;
+  setPriceOverride(store: StoreId, ingredientId: string, price: number | null): Promise<void>;
 
   getCustomRecipes(): Promise<Recipe[]>;
   saveCustomRecipe(recipe: Recipe): Promise<void>;

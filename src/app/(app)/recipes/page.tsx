@@ -68,8 +68,8 @@ export default async function RecipesPage() {
           <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">{ours.map(card)}</div>
         ) : (
           <p className="mt-2 rounded-2xl border border-dashed border-stone-300 p-5 text-sm text-stone-600">
-            Add your own favourites and they&apos;ll appear here, with the same shopping list, calories and Tesco prices
-            as the built-in recipes. They always show up as favourites when you replace a dinner.{" "}
+            Add your own favourites and they&apos;ll appear here, with the same shopping list, calories and prices as
+            the built-in recipes. They always show up as favourites when you replace a dinner.{" "}
             <Link href="/recipes/new" className="font-medium text-emerald-700 hover:underline">
               Add your first recipe
             </Link>

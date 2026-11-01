@@ -1,3 +1,5 @@
+import type { StoreId } from "./stores";
+
 export type Unit = "g" | "ml" | "each" | "tsp" | "tbsp";
 
 export type Aisle =
@@ -23,9 +25,9 @@ export interface Ingredient {
   id: string;
   name: string;
   unit: Unit;
-  /** Size of one Tesco pack, in `unit`. */
+  /** Size of one pack, in `unit`. */
   packSize: number;
-  /** Estimated Tesco price for one pack, in pounds. */
+  /** Estimated Tesco price for one pack, in pounds. Other stores apply their price level. */
   packPrice: number;
   packLabel: string;
   aisle: Aisle;
@@ -59,7 +61,7 @@ export type Protein =
 
 export interface RecipeIngredient {
   id: string;
-  /** Quantity for 3 servings, in the ingredient's unit. */
+  /** Quantity for the recipe's servings (3 unless scaled), in the ingredient's unit. */
   qty: number;
   note?: string;
 }
@@ -80,6 +82,8 @@ export interface Recipe {
   airFryer?: string[];
   /** Added by the household rather than built in. */
   custom?: boolean;
+  /** Set when quantities have been scaled from 3 to a plan's number of people. */
+  servings?: number;
 }
 
 export type Equipment = "hob" | "oven" | "microwave" | "airFryer";
@@ -98,6 +102,10 @@ export interface Plan {
   excluded: string[];
   /** Weekdays (0 = Monday) that need a quick dinner. */
   quickDays: number[];
+  /** Number of people eating; recipe quantities and costs scale to this. */
+  people: number;
+  /** Where the household shops; sets prices and product links. */
+  store: StoreId;
   createdAt: string;
 }
 

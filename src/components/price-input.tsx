@@ -2,15 +2,23 @@
 
 import { useState, useTransition } from "react";
 import { setPrice } from "@/app/actions";
+import type { StoreId } from "@/lib/stores";
 
-export function PriceInput({ id, defaultPrice, override }: { id: string; defaultPrice: number; override?: number }) {
+interface Props {
+  storeId: StoreId;
+  id: string;
+  defaultPrice: number;
+  override?: number;
+}
+
+export function PriceInput({ storeId, id, defaultPrice, override }: Props) {
   const [value, setValue] = useState((override ?? defaultPrice).toFixed(2));
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
 
   function save(next: number | null) {
     startTransition(async () => {
-      await setPrice(id, next);
+      await setPrice(storeId, id, next);
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
     });

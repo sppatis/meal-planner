@@ -12,7 +12,16 @@ export interface ChecklistItem {
 }
 
 /** Tick-off list that remembers its state on this device. */
-export function Checklist({ storageKey, items }: { storageKey: string; items: ChecklistItem[] }) {
+export function Checklist({
+  storageKey,
+  items,
+  linkLabel,
+}: {
+  storageKey: string;
+  items: ChecklistItem[];
+  /** Text for item links, usually the supermarket's name. */
+  linkLabel: string;
+}) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -55,7 +64,7 @@ export function Checklist({ storageKey, items }: { storageKey: string; items: Ch
               {item.meta && <p className="font-medium">{item.meta}</p>}
               {item.href && (
                 <a href={item.href} target="_blank" rel="noreferrer" className="text-xs text-emerald-700 hover:underline">
-                  Tesco
+                  {linkLabel}
                 </a>
               )}
             </div>

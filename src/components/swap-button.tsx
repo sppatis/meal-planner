@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { replaceSlot } from "@/app/actions";
 import { QUICK_MAX_MINS, ROLE_LABELS } from "@/lib/constants";
 import { gbp, weekCost, type PriceOverrides } from "@/lib/cost";
-import { planLibrary } from "@/lib/exclusions";
+import { planLibrary, scaledLibrary } from "@/lib/exclusions";
 import { fitsSlot, isQuickNight } from "@/lib/generator";
 import { nutritionPerServing, totalMins } from "@/lib/nutrition";
 import type { SlotRole } from "@/lib/types";
@@ -15,6 +15,7 @@ interface Props {
   planId: string;
   budget: number;
   excluded: string[];
+  people: number;
   quickDays: number[];
   date: string;
   dayLabel: string;
@@ -32,9 +33,11 @@ export function SwapButton(props: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const { planId, budget, excluded, quickDays, date, role, currentSlug, weekSlugs, favourites, ratings, prices } = props;
-  const fullLibrary = useLibrary();
-  const library = useMemo(() => planLibrary(fullLibrary, { excluded }), [fullLibrary, excluded]);
+  const { planId, budget, excluded, people, quickDays, date, role, currentSlug, weekSlugs, favourites, ratings, prices } = props;
+  const sharedLibrary = useLibrary();
+  // The week may hold dinners the plan now excludes, so costs come from the whole library at the plan's size.
+  const fullLibrary = useMemo(() => scaledLibrary(sharedLibrary, people), [sharedLibrary, people]);
+  const library = useMemo(() => planLibrary(sharedLibrary, { excluded, people }), [sharedLibrary, excluded, people]);
 
   const options = useMemo(() => {
     const cost = (slugs: string[]) =>

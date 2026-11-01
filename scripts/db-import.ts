@@ -107,8 +107,10 @@ async function main() {
       created_at: p.createdAt,
     }));
     if (photos.length) await tx`insert into photos ${tx(photos, "id", "recipe_slug", "file_name", "created_at")}`;
-    const prices = Object.entries(db.prices).map(([ingredient_id, price]) => ({ ingredient_id, price }));
-    if (prices.length) await tx`insert into price_overrides ${tx(prices, "ingredient_id", "price")}`;
+    const prices = Object.entries(db.prices).flatMap(([store, byId]) =>
+      Object.entries(byId).map(([ingredient_id, price]) => ({ store, ingredient_id, price })),
+    );
+    if (prices.length) await tx`insert into price_overrides ${tx(prices, "store", "ingredient_id", "price")}`;
     for (const r of db.customRecipes) {
       await tx`insert into custom_recipes (slug, data) values (${r.slug}, ${tx.json(r as never)})`;
     }
@@ -121,7 +123,7 @@ async function main() {
   console.log(
     `Imported ${db.households.length} households (${db.households.map((h) => h.id).join(", ")}), ` +
       `${db.plans.length} plans, ${db.slots.length} dinners, ${count(db.ratings)} ratings, ` +
-      `${count(db.favourites)} favourites, ${db.photos.length} photos, ${Object.keys(db.prices).length} prices, ` +
+      `${count(db.favourites)} favourites, ${db.photos.length} photos, ${count(db.prices)} prices, ` +
       `${db.customRecipes.length} recipes and ${db.customIngredients.length} ingredients of your own.`,
   );
   const missing = db.photos.filter((p) => !existsSync(path.join(LOCAL_PHOTO_DIR, path.basename(p.url))));

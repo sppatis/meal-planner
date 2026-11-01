@@ -18,7 +18,7 @@ export default async function EditPlanPage({ params }: PageProps<"/plans/[id]/ed
         ← All plans
       </Link>
       <h1 className="mt-3 text-3xl font-bold">Edit {plan.title}</h1>
-      <PlanForm plan={plan} isActive={plan.id === active.id} />
+      <PlanForm plan={plan} isActive={plan.id === active?.id} />
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { SetActivePlanButton } from "@/components/set-active-plan-button";
 import { gbp } from "@/lib/cost";
 import { addDays, formatDate, listDays, planEnd, todayISO } from "@/lib/dates";
 import { loadPlanList } from "@/lib/data";
+import { storeName } from "@/lib/stores";
 import type { Plan } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Plans" };
@@ -35,9 +36,19 @@ export default async function PlansPage() {
         </Link>
       </div>
 
+      {plans.length === 0 && (
+        <p className="mt-6 rounded-2xl border border-dashed border-stone-300 p-5 text-sm text-stone-600">
+          You don&apos;t have a plan yet.{" "}
+          <Link href="/plans/new" className="font-medium text-emerald-700 hover:underline">
+            Start a new plan
+          </Link>{" "}
+          and it&apos;ll appear on the homepage.
+        </p>
+      )}
+
       <ul className="mt-6 space-y-3">
         {plans.map((plan) => {
-          const isActive = plan.id === active.id;
+          const isActive = plan.id === active?.id;
           const s = status(plan, today);
           return (
             <li
@@ -60,6 +71,9 @@ export default async function PlansPage() {
                   <p className="mt-1 text-sm text-stone-600">
                     {formatDate(plan.startDate, long)} to {formatDate(addDays(planEnd(plan), -1), long)} · {plan.weeks}{" "}
                     {plan.weeks === 1 ? "week" : "weeks"} · {gbp(plan.weeklyBudget)} a week
+                  </p>
+                  <p className="mt-1 text-sm text-stone-600">
+                    {plan.people} {plan.people === 1 ? "person" : "people"} · Shopping at {storeName(plan.store)}
                   </p>
                   <p className="mt-1 text-sm text-stone-600">
                     {plan.quickDays.length ? `Quick nights: ${listDays(plan.quickDays)}` : "No quick nights"}

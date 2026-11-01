@@ -12,7 +12,7 @@ export default function NewRecipePage() {
       </Link>
       <h1 className="mt-3 text-3xl font-bold">Add one of your favourites</h1>
       <p className="mt-2 max-w-2xl text-stone-600">
-        Your recipe gets the same page as the built-in ones: shopping list, Tesco prices, calories, method, photos,
+        Your recipe gets the same page as the built-in ones: shopping list, supermarket prices, calories, method, photos,
         ratings and MyFitnessPal sharing. It&apos;ll show up as a favourite when you replace a dinner on the plan.
       </p>
       <RecipeForm />

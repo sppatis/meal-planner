@@ -77,7 +77,7 @@ export function MealCard({ plan, slot, recipe, ingredients, weekSlugs, isToday, 
             <div className="rounded-lg bg-stone-50 py-1">
               <dt className="sr-only">Cost</dt>
               <dd>
-                <b className="block text-sm text-stone-900">{gbp(recipeCost(recipe, prices, ingredients))}</b>for 3
+                <b className="block text-sm text-stone-900">{gbp(recipeCost(recipe, prices, ingredients))}</b>for {plan.people}
               </dd>
             </div>
           </dl>
@@ -89,6 +89,7 @@ export function MealCard({ plan, slot, recipe, ingredients, weekSlugs, isToday, 
           planId={plan.id}
           budget={plan.weeklyBudget}
           excluded={plan.excluded}
+          people={plan.people}
           quickDays={plan.quickDays}
           date={slot.date}
           dayLabel={DAY_NAMES[day]}

@@ -7,7 +7,7 @@ export function priceOf(ing: Ingredient, overrides: PriceOverrides = {}) {
   return overrides[ing.id] ?? ing.packPrice;
 }
 
-/** Share of pack prices actually used by one recipe (all 3 servings). */
+/** Share of pack prices actually used by one recipe (all of its servings). */
 export function recipeCost(recipe: Recipe, overrides: PriceOverrides = {}, ingredients: IngredientMap = INGREDIENTS) {
   let cost = 0;
   for (const line of recipe.ingredients) {
@@ -86,10 +86,6 @@ export const AISLE_ORDER: Aisle[] = [
   "Tins & jars",
   "Cupboard",
 ];
-
-export function tescoSearchUrl(ing: Ingredient) {
-  return `https://www.tesco.com/groceries/en-GB/search?query=${encodeURIComponent(`Tesco ${ing.name.replace(/\s*\(.*\)/, "")}`)}`;
-}
 
 export function gbp(n: number) {
   return `£${n.toFixed(2)}`;

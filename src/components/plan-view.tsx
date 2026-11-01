@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { BudgetBar } from "@/components/budget-bar";
 import { MealCard } from "@/components/meal-card";
 import { RegenerateWeekButton } from "@/components/regenerate-week-button";
@@ -9,11 +10,13 @@ import { daysBetween, formatDate, listDays, planEnd, todayISO, weekDates, weekOf
 import { loadAppData } from "@/lib/data";
 import { nutritionPerServing } from "@/lib/nutrition";
 import { groupByWeek } from "@/lib/plan";
+import { storeName } from "@/lib/stores";
 import type { Plan } from "@/lib/types";
 import { SetActivePlanButton } from "./set-active-plan-button";
 
 export async function PlanView({ plan: requested }: { plan?: Plan }) {
   const { plan, isActive, library, ratings, favourites, coverPhotos, prices, slots } = await loadAppData(requested);
+  if (!plan) notFound();
   const weeks = groupByWeek(plan, slots, library);
   const today = todayISO();
   const currentWeek = weekOf(plan, today);
@@ -62,8 +65,9 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
             {daysToGo > 0 ? `${daysToGo} days to go` : "All done. Well played!"}
           </h1>
           <p className="mt-2 max-w-xl text-emerald-50/90">
-            {plan.weeks} weeks of lighter dinners for three: no fish, no nuts, under {KCAL_CAP.toLocaleString()} kcal
-            each, and {gbp(plan.weeklyBudget).replace(".00", "")} a week at Tesco.
+            {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"} of lighter dinners for {plan.people}: no fish, no nuts,
+            under {KCAL_CAP.toLocaleString()} kcal each, and {gbp(plan.weeklyBudget).replace(".00", "")} a week at{" "}
+            {storeName(plan.store)}.
             {plan.quickDays.length > 0 && ` Quick dinners on ${listDays(plan.quickDays)}.`}
           </p>
           {plan.excluded.length > 0 && (

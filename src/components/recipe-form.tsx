@@ -199,7 +199,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
           </div>
         )}
 
-        <section className="space-y-4 rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+        <section className="space-y-4 card p-5">
           <h2 className="font-bold">The basics</h2>
           <div>
             <label className={label} htmlFor="name">
@@ -263,7 +263,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
           </p>
         </section>
 
-        <section className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+        <section className="card p-5">
           <h2 className="font-bold">Ingredients for {SERVINGS}</h2>
           <p className="mt-1 text-xs text-stone-500">
             Write the recipe for {SERVINGS} people; plans scale the amounts to however many they feed. Pick from the
@@ -418,7 +418,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
               <p className="text-[11px] text-stone-500">Nutrition is {perLabel}. Staples like spices are costed by the amount used, not whole packs.</p>
               {newIngError && <p className="text-sm text-rose-600">{newIngError}</p>}
               <div className="flex gap-2">
-                <button type="button" onClick={addNewIngredient} className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800">
+                <button type="button" onClick={addNewIngredient} className="btn-primary">
                   Add ingredient
                 </button>
                 <button
@@ -436,7 +436,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
           )}
         </section>
 
-        <section className="space-y-4 rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+        <section className="space-y-4 card p-5">
           <h2 className="font-bold">Method</h2>
           <div>
             <label className={label} htmlFor="steps">
@@ -475,7 +475,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
       </div>
 
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-        <div className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+        <div className="card p-5">
           <h2 className="font-bold">Per serving</h2>
           <p className={`mt-2 text-3xl font-bold ${n.kcal > KCAL_CAP ? "text-rose-700" : "text-emerald-700"}`}>{n.kcal} kcal</p>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">

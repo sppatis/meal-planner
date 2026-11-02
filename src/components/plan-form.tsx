@@ -144,7 +144,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
         </div>
       )}
 
-      <section className="space-y-4 rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+      <section className="space-y-4 card p-5">
         <div>
           <label className={label} htmlFor="title">
             Plan title
@@ -256,7 +256,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
         )}
       </section>
 
-      <fieldset className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+      <fieldset className="card p-5">
         <legend className="float-left font-bold">Quick nights</legend>
         <p className="clear-left pt-1 text-xs text-stone-500">
           Pick the evenings you&apos;re short on time. Those nights get a dinner ready in {QUICK_MAX_MINS} minutes or
@@ -297,7 +297,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
         )}
       </fieldset>
 
-      <section className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+      <section className="card p-5">
         <h2 className="font-bold">Recipe groups</h2>
         <p className="mt-1 text-xs text-stone-500">
           Groups in the plan appear as lozenges. Remove one to leave that whole group out of recipe selection; nights
@@ -342,7 +342,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
         )}
       </section>
 
-      <section className="rounded-2xl bg-white p-5 ring-1 ring-stone-200">
+      <section className="card p-5">
         <label className="font-bold" htmlFor="exclude">
           Ingredients to leave out
         </label>

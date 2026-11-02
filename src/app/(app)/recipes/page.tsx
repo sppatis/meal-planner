@@ -70,7 +70,7 @@ export default async function RecipesPage() {
         </div>
         <Link
           href="/recipes/new"
-          className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+          className="btn-cta"
         >
           + Add a recipe
         </Link>

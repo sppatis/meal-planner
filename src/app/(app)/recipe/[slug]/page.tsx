@@ -106,7 +106,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
             <span className="flex items-center gap-2">
               <Link
                 href={`/recipes/${slug}/edit`}
-                className="rounded-lg border border-stone-300 px-3 py-1.5 font-medium hover:border-emerald-600 hover:text-emerald-700"
+                className="btn-secondary"
               >
                 Edit recipe
               </Link>
@@ -135,10 +135,10 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
         </ul>
       </header>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <aside className="space-y-5">
           <PhotoGallery recipeSlug={slug} photos={photos} recipeName={recipe.name} />
-          <div className="rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+          <div className="card p-4">
             <h2 className="mb-2 font-semibold">How did it go?</h2>
             <StarRating recipeSlug={slug} value={ratings[slug]} />
             <p className="mt-2 text-xs text-stone-500">

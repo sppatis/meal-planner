@@ -84,7 +84,7 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
         {formatDate(dates[6], { weekday: "long", day: "numeric", month: "long" })}
       </p>
 
-      <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+      <div className="mt-4 card p-4">
         <BudgetBar cost={list.total} budget={plan.weeklyBudget} />
         <p className="mt-2 text-xs text-stone-500">
           {gbp(list.freshTotal)} this week&apos;s shop plus {gbp(list.stapleTotal)} share of cupboard staples. Estimated {shop} prices,

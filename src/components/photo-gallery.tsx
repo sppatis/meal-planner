@@ -94,7 +94,7 @@ export function PhotoGallery({ recipeSlug, photos, recipeName }: { recipeSlug: s
           type="button"
           onClick={() => input.current?.click()}
           disabled={pending}
-          className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:border-emerald-600"
+          className="btn-secondary"
         >
           {photos.length ? "Add another photo" : "Upload photo"}
         </button>

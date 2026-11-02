@@ -5,13 +5,40 @@
   --font-mono: var(--font-geist-mono);
 }
 
+:root {
+  /* The sticky site header; the week strip on the plan sits just below it. */
+  --header-h: 3.75rem;
+}
+
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 7rem;
+  scroll-padding-top: calc(var(--header-h) + 3.5rem);
+}
+
+/* Stop the page scrolling behind an open drawer or dialog. */
+html:has(dialog:modal) {
+  overflow: hidden;
 }
 
 body {
   @apply bg-stone-50 text-stone-900;
+}
+
+@utility card {
+  @apply rounded-2xl bg-white ring-1 ring-stone-200;
+}
+
+/* Page-level call to action, e.g. "+ New plan". */
+@utility btn-cta {
+  @apply inline-flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply inline-flex items-center justify-center rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50;
+}
+
+@utility btn-secondary {
+  @apply inline-flex items-center justify-center rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:border-emerald-600 hover:text-emerald-700 disabled:opacity-50;
 }
 
 @media print {

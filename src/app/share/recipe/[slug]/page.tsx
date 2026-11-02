@@ -75,7 +75,7 @@ export default async function ShareRecipePage({ params }: PageProps<"/share/reci
           <img src={photoUrls[0]} alt={recipe.name} className="mt-5 aspect-[4/3] w-full rounded-2xl object-cover" />
         )}
 
-        <div className="mt-6 grid gap-6 sm:grid-cols-[1fr_16rem]">
+        <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-[minmax(0,1fr)_16rem]">
           <section>
             <h2 className="text-xl font-bold">Ingredients</h2>
             <ul className="mt-2 list-disc space-y-1 pl-5">

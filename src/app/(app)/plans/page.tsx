@@ -38,7 +38,7 @@ export default async function PlansPage() {
           <DeleteInactivePlansButton count={inactiveCount} />
           <Link
             href="/plans/new"
-            className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+            className="btn-cta"
           >
             + New plan
           </Link>

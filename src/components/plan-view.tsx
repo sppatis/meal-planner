@@ -51,7 +51,7 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
         </div>
       )}
 
-      <section className="mt-6 grid gap-4 rounded-3xl bg-gradient-to-br from-emerald-700 to-teal-800 p-6 text-white sm:grid-cols-[1fr_auto] sm:p-8">
+      <section className="mt-6 grid gap-4 rounded-3xl bg-gradient-to-br from-emerald-700 to-teal-800 p-6 text-white sm:grid-cols-[minmax(0,1fr)_auto] sm:p-8">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-200">{plan.title}</p>
           <p className="mt-2 text-sm font-medium text-emerald-100">
@@ -100,7 +100,7 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
 
       <nav
         aria-label="Jump to week"
-        className="no-print sticky top-[61px] z-10 -mx-4 mt-4 flex gap-1.5 overflow-x-auto bg-stone-50/95 px-4 py-2 backdrop-blur"
+        className="no-print sticky top-(--header-h) z-10 -mx-4 mt-4 flex gap-1.5 overflow-x-auto bg-stone-50/95 px-4 py-2 backdrop-blur"
       >
         {weeks.map((_, w) => (
           <a
@@ -134,7 +134,7 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
               <div className="flex gap-2">
                 <Link
                   href={`/week/${w + 1}/shopping?plan=${plan.id}`}
-                  className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
+                  className="btn-primary"
                 >
                   Shopping list
                 </Link>

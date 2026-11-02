@@ -9,7 +9,7 @@ export function NutritionPanel({ n, servings = SERVINGS }: { n: Nutrition; servi
     ["Fibre", n.fibre],
   ] as const;
   return (
-    <div className="rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+    <div className="card p-4">
       <div className="flex items-baseline justify-between">
         <h2 className="font-semibold">Per serving</h2>
         <span className="text-xs text-stone-500">Recipe serves {servings}</span>

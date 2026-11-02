@@ -65,7 +65,7 @@ export function MealCard({
         <div className="flex flex-1 flex-col gap-2 p-3">
           <div className="flex flex-wrap gap-1">
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${CATEGORY_STYLE[recipe.category].chip}`}>
-              {ROLE_LABELS[slot.role]}
+              {ROLE_LABELS[recipe.category === "hearty" ? "hearty" : slot.role]}
             </span>
             {recipe.custom && (
               <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[11px] font-semibold text-teal-800">Ours</span>

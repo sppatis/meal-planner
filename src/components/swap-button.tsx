@@ -113,6 +113,7 @@ export function SwapButton(props: Props) {
               <h2 className="text-lg font-semibold">Replace {props.dayLabel}&apos;s dinner</h2>
               <p className="mt-1 text-sm text-stone-600">
                 Showing {ROLE_LABELS[role].toLowerCase()} options
+                {role !== "hearty" && options.some((o) => o.recipe.category === "hearty") ? " and Sunday dinners" : ""}
                 {isQuickNight(date, quickDays) ? ` ready in ${QUICK_MAX_MINS} minutes or less` : ""}.
               </p>
             </div>

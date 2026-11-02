@@ -16,6 +16,8 @@ export function isQuickNight(date: string, quickDays: number[]) {
   return quickDays.includes(dayIndex(date));
 }
 
+export const SUNDAY = 6;
+
 function mulberry32(seed: number) {
   let a = seed >>> 0;
   return () => {
@@ -51,8 +53,10 @@ function weightedPick<T>(items: { item: T; weight: number }[], rng: Rng): T | un
 /** Recipes allowed in a slot, ignoring variety rules. Used by the generator and the swap dialog. */
 export function fitsSlot(recipe: Recipe, role: SlotRole, date: string, quickDays: number[]) {
   if (isQuickNight(date, quickDays) && !isQuick(recipe)) return false;
+  // Any Sunday can be a Sunday dinner, including slots planned before Hearty Meals existed.
+  if (recipe.category === "hearty") return role === "hearty" || dayIndex(date) === SUNDAY;
   if (role === "fakeaway") return recipe.category === "fakeaway";
-  if (role === "extra") return recipe.category !== "fakeaway" && recipe.category !== "hearty";
+  if (role === "extra") return recipe.category !== "fakeaway";
   return recipe.category === (role as Category);
 }
 
@@ -163,7 +167,7 @@ function tryWeek(
     r === "extra" || has(r as Category) ? r : "extra",
   );
   // Roasts take too long for a quick night, so Sunday falls back to the usual mix.
-  const heartyDay = has("hearty") && !quickDays.includes(6) ? 6 : -1;
+  const heartyDay = has("hearty") && !quickDays.includes(SUNDAY) ? SUNDAY : -1;
   if (heartyDay >= 0) roles.splice(roles.indexOf("extra"), 1);
   const used = new Set<string>();
   const perCategory = new Map<Category, number>();

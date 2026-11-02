@@ -52,6 +52,13 @@ const list: Ingredient[] = [
   ing("chorizo", "Chorizo ring", "g", 200, 2.2, "200g", MEAT, n(410, 24, 2, 34)),
   ing("ham", "Cooked ham slices", "g", 125, 1.25, "125g", MEAT, n(107, 20, 1, 2.5)),
   ing("quorn-mince", "Quorn mince", "g", 300, 2.5, "300g", FROZEN, n(105, 14.5, 4.5, 2, 5.5)),
+  // Per 100g as bought, counting the skinless meat only (about 55% of the bird).
+  ing("whole-chicken", "Whole chicken", "g", 1500, 4.75, "1.5kg", MEAT, n(66, 12, 0, 1.7)),
+  ing("beef-topside", "Beef topside roasting joint", "g", 750, 7.5, "750g", MEAT, n(134, 23, 0, 4.5)),
+  ing("pork-leg-joint", "Pork leg roasting joint", "g", 1000, 5.0, "1kg", MEAT, n(125, 21, 0, 4.5)),
+  ing("lamb-leg-steaks", "Lamb leg steaks", "g", 400, 5.25, "4 pack, 400g", MEAT, n(150, 21, 0, 7.3)),
+  ing("gammon-joint", "Unsmoked gammon joint", "g", 750, 4.5, "750g", MEAT, n(138, 19, 0.5, 6.8)),
+  ing("braising-steak", "Lean diced braising steak", "g", 400, 4.25, "400g", MEAT, n(130, 22, 0, 4.6)),
 
   // Dairy & eggs
   ing("eggs", "Free range medium eggs", "each", 12, 3.2, "12 pack", DAIRY, n(76, 7.3, 0, 5.2), { each: "egg" }),
@@ -107,6 +114,11 @@ const list: Ingredient[] = [
   ing("green-beans", "Fine green beans", "g", 220, 1.1, "220g", VEG, n(25, 1.9, 3.2, 0.5, 2.7)),
   ing("cabbage", "White cabbage", "g", 900, 0.8, "each (about 900g)", VEG, n(27, 1.2, 4.6, 0.2, 2.4)),
   ing("stir-fry-veg", "Vegetable stir fry", "g", 300, 1.1, "300g", VEG, n(32, 1.8, 4.5, 0.4, 2.2)),
+  ing("parsnip", "Parsnips", "g", 500, 0.69, "500g", VEG, n(67, 1.6, 12.5, 1.1, 4.6)),
+  ing("swede", "Swede", "g", 800, 0.8, "each (about 800g)", VEG, n(24, 0.7, 5, 0.3, 1.9)),
+  ing("sprouts", "Brussels sprouts", "g", 500, 0.99, "500g", VEG, n(42, 3.5, 4.1, 1.4, 4.1)),
+  ing("thyme", "Fresh thyme", "g", 30, 0.75, "30g", VEG, n(101, 5.6, 24, 1.7, 14)),
+  ing("rosemary", "Fresh rosemary", "g", 30, 0.75, "30g", VEG, n(131, 3.3, 21, 5.9, 14)),
 
   // Frozen
   ing("peas", "Frozen garden peas", "g", 1000, 1.25, "1kg", FROZEN, n(66, 6, 9, 0.9, 5), { staple: true }),
@@ -156,6 +168,9 @@ const list: Ingredient[] = [
   ing("cornflour", "Cornflour", "g", 500, 1.0, "500g", CUPBOARD, n(354, 0.6, 88, 0.1), { staple: true }),
   ing("panko", "Panko breadcrumbs", "g", 200, 1.3, "200g", CUPBOARD, n(370, 12, 74, 2.5, 3), { staple: true }),
   ing("cornflakes", "Cornflakes", "g", 500, 0.89, "500g", CUPBOARD, n(378, 7, 84, 0.9, 3), { staple: true }),
+  ing("stuffing-mix", "Sage and onion stuffing mix", "g", 170, 0.65, "170g", CUPBOARD, n(345, 10, 68, 3, 5), {
+    staple: true,
+  }),
 
   // Bakery
   ing("wraps", "Wholemeal tortilla wraps", "each", 8, 1.25, "8 pack", BAKERY, n(180, 5.5, 28, 3.5, 3.5), {
@@ -202,6 +217,13 @@ const list: Ingredient[] = [
   ing("bbq-sauce", "Smoky BBQ sauce", "tbsp", 24, 1.2, "480g", CUPBOARD, n(30, 0.2, 7, 0), {
     staple: true,
     checkLabel: "Some BBQ sauces contain Worcestershire sauce (anchovies). Check the label.",
+  }),
+  ing("apple-sauce", "Bramley apple sauce", "tbsp", 18, 0.85, "280g jar", CUPBOARD, n(16, 0, 3.9, 0), {
+    staple: true,
+  }),
+  ing("mint-sauce", "Mint sauce", "tbsp", 11, 0.75, "165g jar", CUPBOARD, n(8, 0.1, 1.8, 0), { staple: true }),
+  ing("horseradish", "Horseradish sauce", "tbsp", 12, 0.85, "185g jar", CUPBOARD, n(24, 0.3, 2.4, 1.4), {
+    staple: true,
   }),
   ing("dijon", "Dijon mustard", "tsp", 35, 0.85, "185g", CUPBOARD, n(8, 0.4, 0.3, 0.6), { staple: true }),
   ing("light-mayo", "Light mayonnaise", "tbsp", 28, 1.4, "430ml", CUPBOARD, n(40, 0.1, 1, 4), { staple: true }),

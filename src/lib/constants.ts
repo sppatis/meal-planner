@@ -20,6 +20,7 @@ export const CATEGORY_LABELS = {
   potato: "Potato",
   veggie: "Veggie",
   fakeaway: "Fake-away",
+  hearty: "Hearty Meals",
   other: "Mix it up",
 } as const;
 
@@ -29,5 +30,6 @@ export const ROLE_LABELS = {
   potato: "Potato dish",
   veggie: "Veggie option",
   fakeaway: "Fake-away",
+  hearty: "Sunday dinner",
   extra: "Extra",
 } as const;

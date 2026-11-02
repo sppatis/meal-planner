@@ -113,4 +113,11 @@ export const MIGRATIONS: string[] = [
     primary key (household_id, recipe_slug)
   );
   `,
+
+  // 5: Sunday dinners from the Hearty Meals group.
+  `
+  alter table meal_slots drop constraint meal_slots_role_check;
+  alter table meal_slots add constraint meal_slots_role_check
+    check (role in ('rice', 'pasta', 'potato', 'veggie', 'fakeaway', 'hearty', 'extra'));
+  `,
 ];

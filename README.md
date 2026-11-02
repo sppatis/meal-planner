@@ -4,7 +4,9 @@ Dinner plans for any household size. The original plan, **Road to Australia**, f
 2026 to Sun 21 Mar 2027) at Tesco; you can add more plans with their own number of people and supermarket.
 
 - Every dinner is free of fish, shellfish and nuts, and under 1,000 kcal per person.
-- Each week has a rice dish, pasta dish, potato dish, veggie option, a Friday or Saturday fake-away, and 2 extras.
+- Each week has a rice dish, pasta dish, potato dish, veggie option, a Friday or Saturday fake-away, a Sunday dinner
+  from the **Hearty Meals** group (roasts, toad in the hole, braised beef and so on) and an extra. If Sunday is a quick
+  night, or the plan leaves Hearty Meals out, Sunday gets a second extra instead.
 - Each plan has its own quick nights (Monday to Wednesday by default), which get dinners ready in 25 minutes or less.
 - Each plan chooses how many people it feeds (1–10) and where they shop. Recipe amounts, shopping lists and costs
   scale to that headcount. Pack prices are estimated from the Tesco catalogue with a rough price level per

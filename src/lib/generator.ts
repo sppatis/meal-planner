@@ -52,7 +52,7 @@ function weightedPick<T>(items: { item: T; weight: number }[], rng: Rng): T | un
 export function fitsSlot(recipe: Recipe, role: SlotRole, date: string, quickDays: number[]) {
   if (isQuickNight(date, quickDays) && !isQuick(recipe)) return false;
   if (role === "fakeaway") return recipe.category === "fakeaway";
-  if (role === "extra") return recipe.category !== "fakeaway";
+  if (role === "extra") return recipe.category !== "fakeaway" && recipe.category !== "hearty";
   return recipe.category === (role as Category);
 }
 
@@ -162,6 +162,9 @@ function tryWeek(
   const roles = shuffle<SlotRole>(["rice", "pasta", "potato", "veggie", "extra", "extra"], rng).map((r) =>
     r === "extra" || has(r as Category) ? r : "extra",
   );
+  // Roasts take too long for a quick night, so Sunday falls back to the usual mix.
+  const heartyDay = has("hearty") && !quickDays.includes(6) ? 6 : -1;
+  if (heartyDay >= 0) roles.splice(roles.indexOf("extra"), 1);
   const used = new Set<string>();
   const perCategory = new Map<Category, number>();
   const slots: MealSlot[] = [];
@@ -171,11 +174,13 @@ function tryWeek(
     const date = dates[day];
     const quickNight = isQuickNight(date, quickDays);
     const role: SlotRole =
-      day !== fakeawayDay
-        ? roles.shift()!
-        : library.recipes.some((r) => r.category === "fakeaway" && (!quickNight || isQuick(r)))
-          ? "fakeaway"
-          : "extra";
+      day === heartyDay
+        ? "hearty"
+        : day !== fakeawayDay
+          ? roles.shift()!
+          : library.recipes.some((r) => r.category === "fakeaway" && (!quickNight || isQuick(r)))
+            ? "fakeaway"
+            : "extra";
     const next = day === 6 && after ? library.bySlug[after.recipeSlug] : undefined;
 
     const candidates = library.recipes.filter(

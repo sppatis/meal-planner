@@ -34,6 +34,8 @@ export interface HouseholdStore {
   /** Replace the plan's slots whose dates fall within `dates` with `slots`. */
   replaceSlots(planId: string, dates: string[], slots: MealSlot[]): Promise<void>;
   setSlotRecipe(planId: string, date: string, recipeSlug: string, role?: MealSlot["role"]): Promise<void>;
+  /** Leave this night's dinner off the shopping list, or put the same dinner back. The recipe stays in the slot. */
+  setSlotSkipped(planId: string, date: string, skipped: boolean): Promise<void>;
 
   getRatings(): Promise<Record<string, number>>;
   setRating(recipeSlug: string, stars: number): Promise<void>;

@@ -137,6 +137,11 @@ export interface MealSlot {
   date: string;
   role: SlotRole;
   recipeSlug: string;
+  /**
+   * The household is out this night. The dinner stays in the slot and on the plan;
+   * shopping-list generation leaves it out until this is turned off.
+   */
+  skipped?: boolean;
 }
 
 export interface Photo {

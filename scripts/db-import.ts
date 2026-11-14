@@ -89,9 +89,10 @@ async function main() {
         date: s.date,
         role: s.role,
         recipe_slug: s.recipeSlug,
+        skipped: s.skipped === true,
       }));
     if (slotRows.length) {
-      await tx`insert into meal_slots ${tx(slotRows, "household_id", "plan_id", "date", "role", "recipe_slug")}`;
+      await tx`insert into meal_slots ${tx(slotRows, "household_id", "plan_id", "date", "role", "recipe_slug", "skipped")}`;
     }
 
     const ratings = Object.entries(db.ratings).flatMap(([household_id, stars]) =>

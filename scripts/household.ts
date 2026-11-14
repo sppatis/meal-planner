@@ -75,6 +75,8 @@ async function main() {
         passcodeHash: await hashPasscode(passcode),
         sessionVersion: 1,
         createdAt: new Date().toISOString(),
+        allergies: [],
+        avatarFile: null,
       };
       await store.saveHousehold(household);
       return announce(household, passcode);

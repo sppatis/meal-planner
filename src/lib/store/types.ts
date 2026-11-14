@@ -1,5 +1,5 @@
 import type { StoreId } from "@/lib/stores";
-import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
+import type { Allergen, Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
 
 /** The household that owns everything saved before households existed. */
 export const HOME_HOUSEHOLD = "home";
@@ -12,6 +12,10 @@ export interface Household {
   /** Bumped when the passcode is reset, which signs the household's devices out. */
   sessionVersion: number;
   createdAt: string;
+  /** Allergens this household avoids. Every plan follows this list. */
+  allergies: Allergen[];
+  /** File name in the photo directory, or null when the household has no avatar. */
+  avatarFile: string | null;
 }
 
 /** Data that belongs to one household. Every method is scoped to the household the store was created for. */

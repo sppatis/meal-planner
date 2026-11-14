@@ -1,6 +1,7 @@
 import { INGREDIENTS } from "@/data/ingredients";
 import { RECIPES } from "@/data/recipes";
 import { AIR_FRYER } from "@/data/recipes/air-fryer";
+import { bannedAllergens } from "./allergens";
 import { glutenIn } from "./celiac";
 import { KCAL_CAP } from "./constants";
 import { BUILTIN_LIBRARY } from "./library";
@@ -56,7 +57,8 @@ export function allergenMatch(text: string) {
 
 export function ingredientProblems(ing: Ingredient): string[] {
   const problems: string[] = [];
-  if (ing.allergens?.length) problems.push(`${ing.name} contains ${ing.allergens.join(", ")}`);
+  const banned = bannedAllergens(ing.allergens);
+  if (banned.length) problems.push(`${ing.name} contains ${banned.join(", ")}`);
   const match = allergenMatch(ing.name);
   if (match) problems.push(`${ing.name} looks like it contains fish or nuts ("${match}")`);
   return problems;

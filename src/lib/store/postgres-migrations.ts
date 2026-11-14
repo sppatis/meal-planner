@@ -120,4 +120,18 @@ export const MIGRATIONS: string[] = [
   alter table meal_slots add constraint meal_slots_role_check
     check (role in ('rice', 'pasta', 'potato', 'veggie', 'fakeaway', 'hearty', 'extra'));
   `,
+
+  // 6: household allergies and avatar. A household that already required celiac-safe dinners starts with gluten ticked.
+  `
+  alter table households add column allergies jsonb not null default '[]';
+  alter table households add column avatar_file text;
+
+  update households h
+  set allergies = '["gluten"]'::jsonb
+  where exists (
+    select 1 from plans p
+    where p.household_id = h.id
+      and coalesce((p.data->>'celiacSafe')::boolean, false)
+  );
+  `,
 ];

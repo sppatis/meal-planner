@@ -3,7 +3,7 @@ import { DAY_NAMES, QUICK_MAX_MINS, ROLE_LABELS } from "@/lib/constants";
 import { gbp, recipeCost, type PriceOverrides } from "@/lib/cost";
 import { dayIndex, formatDate } from "@/lib/dates";
 import { nutritionPerServing, totalMins } from "@/lib/nutrition";
-import type { IngredientMap, MealSlot, Plan, Recipe } from "@/lib/types";
+import type { Allergen, IngredientMap, MealSlot, Plan, Recipe } from "@/lib/types";
 import { CeliacChip } from "./celiac-chip";
 import { CATEGORY_STYLE } from "./category-style";
 import { RecipeArt } from "./recipe-art";
@@ -23,6 +23,7 @@ interface Props {
   hidden: string[];
   ratings: Record<string, number>;
   prices: PriceOverrides;
+  allergies: readonly Allergen[];
 }
 
 export function MealCard({
@@ -38,6 +39,7 @@ export function MealCard({
   hidden,
   ratings,
   prices,
+  allergies,
 }: Props) {
   const day = dayIndex(slot.date);
   const quickNight = plan.quickDays.includes(day);
@@ -65,7 +67,7 @@ export function MealCard({
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${CATEGORY_STYLE[recipe.category].chip}`}>
               {ROLE_LABELS[recipe.category === "hearty" ? "hearty" : slot.role]}
             </span>
-            {plan.celiacSafe && recipe.celiacSafe && <CeliacChip />}
+            {allergies.includes("gluten") && recipe.celiacSafe && <CeliacChip />}
             {recipe.custom && (
               <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[11px] font-semibold text-teal-800">Ours</span>
             )}
@@ -103,7 +105,7 @@ export function MealCard({
           budget={plan.weeklyBudget}
           excluded={plan.excluded}
           excludedCategories={plan.excludedCategories}
-          celiacSafe={plan.celiacSafe}
+          allergies={allergies}
           people={plan.people}
           quickDays={plan.quickDays}
           date={slot.date}

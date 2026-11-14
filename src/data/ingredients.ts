@@ -1,4 +1,5 @@
-import type { Aisle, Ingredient, Nutrition, Unit } from "@/lib/types";
+import { ALLERGENS } from "@/lib/allergens";
+import type { Aisle, Allergen, Ingredient, Nutrition, Unit } from "@/lib/types";
 
 /** kcal, protein, carbs, fat, fibre */
 const n = (kcal: number, protein: number, carbs: number, fat: number, fibre = 0): Nutrition => ({
@@ -255,12 +256,13 @@ const list: Ingredient[] = [
 
 /**
  * Products that contain wheat, barley or rye. Cornflour is maize and is not listed.
- * Stock cubes, gravy, sausages and cornflakes are here because the usual UK versions
- * contain wheat or barley malt, not because every brand does.
+ * Stock cubes, gravy, sausages, cornflakes and Quorn mince are here because the usual
+ * UK versions contain wheat, not because every brand does.
  */
 const GLUTEN_IDS = new Set([
   "sausages",
   "chorizo",
+  "quorn-mince",
   "penne",
   "spaghetti",
   "fusilli",
@@ -285,6 +287,47 @@ const GLUTEN_IDS = new Set([
   "soy-sauce",
 ]);
 
-export const INGREDIENT_LIST = list.map((i) => (GLUTEN_IDS.has(i.id) ? { ...i, containsGluten: true } : i));
+/**
+ * Other UK 14 allergens in the usual supermarket product. Gluten is added from GLUTEN_IDS.
+ * Fish, crustaceans, molluscs, peanuts, tree nuts, sesame and lupin are not in this catalogue.
+ */
+const OTHER_ALLERGENS: Record<string, Allergen[]> = {
+  "halloumi-light": ["milk"],
+  paneer: ["milk"],
+  milk: ["milk"],
+  "cream-cheese-light": ["milk"],
+  "creme-fraiche-light": ["milk"],
+  "greek-yogurt": ["milk"],
+  "cheddar-light": ["milk"],
+  "mozzarella-light": ["milk"],
+  "grana-padano": ["milk"],
+  "feta-light": ["milk"],
+  horseradish: ["milk", "mustard"],
+  eggs: ["eggs"],
+  "egg-noodles": ["eggs"],
+  "light-mayo": ["eggs", "mustard"],
+  "quorn-mince": ["eggs"],
+  "soy-sauce": ["soya"],
+  "chicken-stock": ["soya", "celery"],
+  "veg-stock": ["soya", "celery"],
+  "beef-stock": ["soya", "celery"],
+  "gravy-granules": ["soya", "celery"],
+  celery: ["celery"],
+  dijon: ["mustard"],
+  balsamic: ["sulphites"],
+  "white-wine-vinegar": ["sulphites"],
+};
+
+export const INGREDIENT_LIST = list.map((i) => {
+  const tags = new Set<Allergen>(OTHER_ALLERGENS[i.id] ?? []);
+  const containsGluten = GLUTEN_IDS.has(i.id);
+  if (containsGluten) tags.add("gluten");
+  const allergens = ALLERGENS.filter((a) => tags.has(a));
+  return {
+    ...i,
+    ...(containsGluten ? { containsGluten: true as const } : {}),
+    ...(allergens.length ? { allergens } : {}),
+  };
+});
 
 export const INGREDIENTS: Record<string, Ingredient> = Object.fromEntries(INGREDIENT_LIST.map((i) => [i.id, i]));

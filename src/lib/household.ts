@@ -14,6 +14,8 @@ async function homeHousehold(): Promise<Household> {
     passcodeHash: null,
     sessionVersion: 1,
     createdAt: new Date().toISOString(),
+    allergies: [],
+    avatarFile: null,
   };
   await store.saveHousehold(created);
   return created;

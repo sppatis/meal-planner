@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { ALLERGENS, isAllergen } from "@/lib/allergens";
 import { CATEGORY_LABELS, MAX_PLAN_WEEKS } from "@/lib/constants";
 import { AISLE_ORDER } from "@/lib/cost";
 import { findPlan, loadLibrary, loadPlanList } from "@/lib/data";
@@ -12,8 +13,9 @@ import { householdStore, requireHousehold } from "@/lib/household";
 import { ensurePlanSlots, generateFullPlan, regenerateWeeks } from "@/lib/plan";
 import { MAX_PEOPLE, MIN_PEOPLE } from "@/lib/scale";
 import { store } from "@/lib/store";
+import { removePhotoFile, savePhotoFile } from "@/lib/store/photo-files";
 import { isStoreId } from "@/lib/stores";
-import type { Aisle, Category, Ingredient, MealSlot, Plan, Protein, Recipe, Unit } from "@/lib/types";
+import type { Aisle, Allergen, Category, Ingredient, MealSlot, Plan, Protein, Recipe, Unit } from "@/lib/types";
 import { ingredientProblems, recipeProblems } from "@/lib/validate";
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[];
@@ -83,8 +85,6 @@ export interface PlanDraft {
   excluded: string[];
   /** Recipe groups to leave out of planning. */
   excludedCategories: string[];
-  /** Every dinner must be a celiac-safe recipe. */
-  celiacSafe: boolean;
   quickDays: number[];
   people: number;
   store: string;
@@ -151,7 +151,8 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
     weeklyBudget,
     excluded,
     excludedCategories,
-    celiacSafe: draft.celiacSafe === true,
+    // Older plans may still carry this. New plans don't, and planning follows the household instead.
+    celiacSafe: existing?.celiacSafe === true,
     quickDays,
     people,
     store: storeId,
@@ -268,6 +269,16 @@ const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : N
 const lines = (v: unknown, max: number) =>
   (Array.isArray(v) ? v : []).map((s) => text(s, 600)).filter(Boolean).slice(0, max);
 
+function allergenFields(raw: Ingredient): Pick<Ingredient, "allergens" | "containsGluten"> {
+  const selected = new Set<Allergen>((raw.allergens ?? []).filter(isAllergen));
+  if (raw.containsGluten === true) selected.add("gluten");
+  const allergens = ALLERGENS.filter((a) => selected.has(a));
+  return {
+    ...(allergens.length ? { allergens } : {}),
+    ...(selected.has("gluten") ? { containsGluten: true } : {}),
+  };
+}
+
 function cleanIngredient(raw: Ingredient, errors: string[]): Ingredient | null {
   const name = text(raw.name, 60);
   const label = name || "A new ingredient";
@@ -289,7 +300,7 @@ function cleanIngredient(raw: Ingredient, errors: string[]): Ingredient | null {
       fibre: num(per.fibre) || 0,
     },
     each: raw.unit === "each" ? text(raw.each, 40) || name.toLowerCase() : undefined,
-    containsGluten: raw.containsGluten === true || undefined,
+    ...allergenFields(raw),
     custom: true,
   };
   if (!ing.id.startsWith(CUSTOM_PREFIX)) errors.push(`${label} has an invalid id`);
@@ -370,6 +381,40 @@ export async function saveRecipe(draft: RecipeDraft): Promise<SaveRecipeResult> 
   await store.saveCustomRecipe(recipe);
   refreshAll();
   return { ok: true, slug: recipe.slug };
+}
+
+const AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+/** Rename the signed-in household, change its avatar, and set the allergies every plan follows. */
+export async function updateHousehold(formData: FormData): Promise<{ ok: true } | { ok: false; errors: string[] }> {
+  const household = await requireHousehold();
+  const name = text(formData.get("name"), 40);
+  const errors: string[] = [];
+  if (name.length < 2) errors.push("Give the household a name");
+  const file = formData.get("avatar");
+  if (file instanceof File && file.size > 0) {
+    if (!AVATAR_TYPES.has(file.type)) errors.push("The avatar needs to be a JPEG, PNG or WebP image");
+    else if (file.size > 4 * 1024 * 1024) errors.push("The avatar needs to be under 4 MB");
+  }
+  if (errors.length) return { ok: false, errors };
+
+  let avatarFile = household.avatarFile;
+  if (file instanceof File && file.size > 0) {
+    const saved = await savePhotoFile(file);
+    if (avatarFile) await removePhotoFile(avatarFile);
+    avatarFile = saved.fileName;
+  } else if (formData.get("removeAvatar") === "on" && avatarFile) {
+    await removePhotoFile(avatarFile);
+    avatarFile = null;
+  }
+
+  const allergies = [...formData.getAll("allergies")].filter(isAllergen);
+  await store.saveHousehold({ ...household, name, allergies, avatarFile });
+  const hs = store.forHousehold(household.id);
+  const [plans, library] = await Promise.all([hs.getPlans(), loadLibrary()]);
+  for (const plan of plans) await ensurePlanSlots(hs, plan, library);
+  refreshAll();
+  return { ok: true };
 }
 
 export async function deleteRecipe(slug: string) {

@@ -10,12 +10,15 @@ import { daysBetween, formatDate, listDays, planEnd, todayISO, weekDates, weekOf
 import { loadAppData } from "@/lib/data";
 import { nutritionPerServing } from "@/lib/nutrition";
 import { groupByWeek } from "@/lib/plan";
+import { listAllergens } from "@/lib/allergens";
 import { storeName } from "@/lib/stores";
 import type { Plan } from "@/lib/types";
 import { SetActivePlanButton } from "./set-active-plan-button";
 
 export async function PlanView({ plan: requested }: { plan?: Plan }) {
-  const { plan, isActive, library, ratings, favourites, hidden, coverPhotos, prices, slots } = await loadAppData(requested);
+  const { plan, isActive, library, ratings, favourites, hidden, coverPhotos, prices, slots, allergies } =
+    await loadAppData(requested);
+  const avoiding = listAllergens(allergies);
   if (!plan) notFound();
   const weeks = groupByWeek(plan, slots, library);
   const today = todayISO();
@@ -66,7 +69,7 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
           </h1>
           <p className="mt-2 max-w-xl text-emerald-50/90">
             {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"} of lighter dinners for {plan.people}
-            {plan.celiacSafe ? ", every one celiac safe" : ""}: no fish, no nuts,
+            {avoiding ? `, avoiding ${avoiding}` : ""}: no fish, no nuts,
             under {KCAL_CAP.toLocaleString()} kcal each, and {gbp(plan.weeklyBudget).replace(".00", "")} a week at{" "}
             {storeName(plan.store)}.
             {plan.quickDays.length > 0 && ` Quick dinners on ${listDays(plan.quickDays)}.`}
@@ -158,6 +161,7 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
                   hidden={hidden}
                   ratings={ratings}
                   prices={prices}
+                  allergies={allergies}
                 />
               ))}
             </div>

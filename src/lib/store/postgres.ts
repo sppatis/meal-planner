@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { isAllergen } from "@/lib/allergens";
 import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
 import { photoUrl, removePhotoFile, savePhotoFile } from "./photo-files";
 import { MIGRATIONS } from "./postgres-migrations";
@@ -186,6 +187,8 @@ interface HouseholdRow {
   passcode_hash: string | null;
   session_version: number;
   created_at: Date;
+  allergies: unknown;
+  avatar_file: string | null;
 }
 
 const toHousehold = (row: HouseholdRow): Household => ({
@@ -194,6 +197,8 @@ const toHousehold = (row: HouseholdRow): Household => ({
   passcodeHash: row.passcode_hash,
   sessionVersion: row.session_version,
   createdAt: row.created_at.toISOString(),
+  allergies: Array.isArray(row.allergies) ? row.allergies.filter(isAllergen) : [],
+  avatarFile: row.avatar_file,
 });
 
 export const postgresStore: Store = {
@@ -210,11 +215,11 @@ export const postgresStore: Store = {
   },
   async saveHousehold(household) {
     const sql = await getSql();
-    await sql`insert into households (id, name, passcode_hash, session_version, created_at)
+    await sql`insert into households (id, name, passcode_hash, session_version, created_at, allergies, avatar_file)
       values (${household.id}, ${household.name}, ${household.passcodeHash}, ${household.sessionVersion},
-        ${household.createdAt})
+        ${household.createdAt}, ${sql.json(household.allergies)}, ${household.avatarFile})
       on conflict (id) do update set name = excluded.name, passcode_hash = excluded.passcode_hash,
-        session_version = excluded.session_version`;
+        session_version = excluded.session_version, allergies = excluded.allergies, avatar_file = excluded.avatar_file`;
   },
   async deleteHousehold(id) {
     const sql = await getSql();

@@ -7,7 +7,7 @@ import { gbp, weekCost, type PriceOverrides } from "@/lib/cost";
 import { planLibrary, scaledLibrary } from "@/lib/exclusions";
 import { fitsSlot, isQuickNight } from "@/lib/generator";
 import { nutritionPerServing, totalMins } from "@/lib/nutrition";
-import type { Category, SlotRole } from "@/lib/types";
+import type { Allergen, Category, SlotRole } from "@/lib/types";
 import { useLibrary } from "./library-provider";
 import { StarDisplay } from "./stars";
 
@@ -16,7 +16,7 @@ interface Props {
   budget: number;
   excluded: string[];
   excludedCategories: Category[];
-  celiacSafe?: boolean;
+  allergies?: readonly Allergen[];
   people: number;
   quickDays: number[];
   date: string;
@@ -42,7 +42,7 @@ export function SwapButton(props: Props) {
     budget,
     excluded,
     excludedCategories,
-    celiacSafe,
+    allergies = [],
     people,
     quickDays,
     date,
@@ -58,8 +58,8 @@ export function SwapButton(props: Props) {
   // The week may hold dinners the plan now excludes, so costs come from the whole library at the plan's size.
   const fullLibrary = useMemo(() => scaledLibrary(sharedLibrary, people), [sharedLibrary, people]);
   const library = useMemo(
-    () => planLibrary(sharedLibrary, { excluded, excludedCategories, people, celiacSafe }, hidden),
-    [sharedLibrary, excluded, excludedCategories, people, celiacSafe, hidden],
+    () => planLibrary(sharedLibrary, { excluded, excludedCategories, people }, hidden, allergies),
+    [sharedLibrary, excluded, excludedCategories, people, allergies, hidden],
   );
 
   const options = useMemo(() => {

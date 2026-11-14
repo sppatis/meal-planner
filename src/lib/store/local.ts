@@ -1,8 +1,9 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import { isAllergen } from "@/lib/allergens";
 import { ORIGINAL_PLAN_ID } from "@/lib/constants";
-import type { Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
+import type { Allergen, Ingredient, MealSlot, Photo, Plan, Recipe } from "@/lib/types";
 import { photoUrl, removePhotoFile, savePhotoFile } from "./photo-files";
 import { HOME_HOUSEHOLD, type Household, type HouseholdStore, type Store } from "./types";
 
@@ -31,13 +32,25 @@ export interface LocalDb {
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 
-const homeHousehold = (): Household => ({
-  id: HOME_HOUSEHOLD,
-  name: "Home",
-  passcodeHash: null,
-  sessionVersion: 1,
-  createdAt: new Date(0).toISOString(),
-});
+/** Missing allergies are seeded once from a plan that was celiac-safe. An explicit list, even empty, is kept. */
+function allergiesFor(raw: { allergies?: unknown; id?: string }, plans: { householdId?: string; celiacSafe?: boolean }[]): Allergen[] {
+  if (Array.isArray(raw.allergies)) return raw.allergies.filter(isAllergen);
+  const id = raw.id ?? HOME_HOUSEHOLD;
+  const gluten = plans.some((p) => (p.householdId ?? HOME_HOUSEHOLD) === id && p.celiacSafe === true);
+  return gluten ? ["gluten"] : [];
+}
+
+function toHousehold(raw: Partial<Household> & { id: string }, plans: { householdId?: string; celiacSafe?: boolean }[]): Household {
+  return {
+    id: raw.id,
+    name: raw.name || "Home",
+    passcodeHash: raw.passcodeHash ?? null,
+    sessionVersion: raw.sessionVersion ?? 1,
+    createdAt: raw.createdAt ?? new Date(0).toISOString(),
+    allergies: allergiesFor(raw, plans),
+    avatarFile: typeof raw.avatarFile === "string" && raw.avatarFile ? raw.avatarFile : null,
+  };
+}
 
 /**
  * Reads any version of db.json. Files saved before households existed had one set of plans, ratings and
@@ -48,8 +61,13 @@ export function normaliseLocalDb(raw: any): LocalDb {
   const flatRatings = raw.ratings && Object.values(raw.ratings).some((v) => typeof v === "number");
   // Corrections saved before supermarkets were configurable were Tesco prices.
   const flatPrices = raw.prices && Object.values(raw.prices).some((v) => typeof v === "number");
+  const plans = raw.plans ?? [];
+  // A file from before households existed has no list. Leave allergies unset so a celiac plan can seed gluten.
+  const storedHouseholds = Array.isArray(raw.households)
+    ? raw.households
+    : [{ id: HOME_HOUSEHOLD, name: "Home", passcodeHash: null, sessionVersion: 1, createdAt: new Date(0).toISOString() }];
   return {
-    households: Array.isArray(raw.households) ? raw.households : [homeHousehold()],
+    households: storedHouseholds.map((h: Household) => toHousehold(h, plans)),
     plans: (raw.plans ?? []).map((p: StoredPlan) => ({ ...p, householdId: p.householdId ?? HOME_HOUSEHOLD })),
     activePlanIds: raw.activePlanIds ?? (raw.activePlanId ? { [HOME_HOUSEHOLD]: raw.activePlanId } : {}),
     slots: (raw.slots ?? []).map((s: StoredSlot) => ({

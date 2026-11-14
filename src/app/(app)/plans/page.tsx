@@ -3,6 +3,7 @@ import Link from "next/link";
 import { DeleteInactivePlansButton } from "@/components/delete-inactive-plans-button";
 import { DeletePlanButton } from "@/components/delete-plan-button";
 import { PlanActiveToggle } from "@/components/plan-active-toggle";
+import { listAllergens } from "@/lib/allergens";
 import { CATEGORY_LABELS } from "@/lib/constants";
 import { gbp } from "@/lib/cost";
 import { addDays, formatDate, listDays, planEnd, todayISO } from "@/lib/dates";
@@ -19,7 +20,8 @@ function status(plan: Plan, today: string) {
 }
 
 export default async function PlansPage() {
-  const { plans, active } = await loadPlanList();
+  const { plans, active, household } = await loadPlanList();
+  const avoiding = listAllergens(household.allergies);
   const today = todayISO();
   const long = { day: "numeric", month: "short", year: "numeric" } as const;
   const inactiveCount = plans.filter((p) => p.id !== active?.id).length;
@@ -32,6 +34,7 @@ export default async function PlansPage() {
           <p className="mt-2 text-stone-600">
             The active plan is the one shown on the homepage. Turn a plan off to clear the homepage, or delete any plan
             that isn&apos;t active.
+            {avoiding ? ` Every plan avoids ${avoiding}.` : ""}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -81,7 +84,6 @@ export default async function PlansPage() {
                   </p>
                   <p className="mt-1 text-sm text-stone-600">
                     {plan.quickDays.length ? `Quick nights: ${listDays(plan.quickDays)}` : "No quick nights"}
-                    {plan.celiacSafe ? " · Celiac safe only" : ""}
                   </p>
                   {(plan.excludedCategories.length > 0 || plan.excluded.length > 0) && (
                     <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">

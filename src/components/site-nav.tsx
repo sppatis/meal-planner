@@ -15,7 +15,29 @@ const LINKS = [
 /** Matches Tailwind's `md` breakpoint, where the inline links take over from the drawer. */
 const DESKTOP = "(min-width: 48rem)";
 
-export function SiteNav({ householdName, canSignOut }: { householdName: string; canSignOut: boolean }) {
+function Avatar({ name, url }: { name: string; url: string | null }) {
+  if (url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="" className="h-7 w-7 rounded-full object-cover ring-1 ring-stone-200" />
+    );
+  }
+  return (
+    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">
+      {name.slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
+
+export function SiteNav({
+  householdName,
+  avatarUrl,
+  canSignOut,
+}: {
+  householdName: string;
+  avatarUrl: string | null;
+  canSignOut: boolean;
+}) {
   const pathname = usePathname();
   const drawer = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
@@ -40,13 +62,15 @@ export function SiteNav({ householdName, canSignOut }: { householdName: string; 
     setOpen(true);
   }
 
+  const onHousehold = pathname === "/household";
+  const householdClass = `flex items-center gap-2 rounded-lg px-2 py-1.5 ${
+    onHousehold ? "bg-emerald-50 text-emerald-800" : "text-stone-700 hover:bg-stone-100"
+  }`;
+
   const signOut = canSignOut && (
     <form action={logout}>
-      <button
-        className="w-full rounded-lg px-3 py-2 text-left text-stone-500 hover:bg-stone-100 hover:text-stone-800 md:w-auto"
-        title={`Signed in as ${householdName}`}
-      >
-        <span className="text-stone-400">{householdName} · </span>Sign out
+      <button className="w-full rounded-lg px-3 py-2 text-left text-stone-500 hover:bg-stone-100 hover:text-stone-800 md:w-auto">
+        Sign out
       </button>
     </form>
   );
@@ -67,6 +91,10 @@ export function SiteNav({ householdName, canSignOut }: { householdName: string; 
             </Link>
           );
         })}
+        <Link href="/household" aria-current={onHousehold ? "page" : undefined} className={householdClass}>
+          <Avatar name={householdName} url={avatarUrl} />
+          <span className="font-medium">{householdName}</span>
+        </Link>
         {signOut}
       </nav>
 
@@ -129,7 +157,13 @@ export function SiteNav({ householdName, canSignOut }: { householdName: string; 
               })}
             </ul>
           </nav>
-          {signOut && <div className="border-t border-stone-200 p-3 text-sm">{signOut}</div>}
+          <div className="space-y-1 border-t border-stone-200 p-3 text-sm">
+            <Link href="/household" onClick={close} aria-current={onHousehold ? "page" : undefined} className={householdClass}>
+              <Avatar name={householdName} url={avatarUrl} />
+              <span className="font-medium">{householdName}</span>
+            </Link>
+            {signOut}
+          </div>
         </div>
       </dialog>
     </>

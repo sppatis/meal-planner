@@ -274,7 +274,7 @@ export interface RecipeDraft {
 export type SaveRecipeResult = { ok: true; slug: string } | { ok: false; errors: string[] };
 
 const UNITS: Unit[] = ["g", "ml", "each", "tsp", "tbsp"];
-const PROTEINS: Protein[] = ["chicken", "beef", "pork", "turkey", "lamb", "egg", "veggie"];
+const PROTEINS: Protein[] = ["chicken", "beef", "pork", "turkey", "lamb", "fish", "egg", "veggie"];
 
 const text = (v: unknown, max: number) => (typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, max) : "");
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);

@@ -87,7 +87,8 @@ export function HouseholdForm({
         <legend className="font-bold">Allergies and intolerances</legend>
         <p className="mt-1 text-xs text-stone-500">
           Tick everything this household needs to avoid. Every plan leaves out dinners that use them. Milk covers the
-          dairy in the catalogue. Fish, crustaceans, molluscs and nuts are already kept out of every dinner.
+          dairy in the catalogue. Shellfish and nuts are already kept out of every dinner. Tick Fish to leave fish
+          dinners out as well.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {ALLERGENS.map((allergen) => (

@@ -70,7 +70,8 @@ export default async function RecipesPage() {
         <div>
           <h1 className="text-3xl font-bold">All recipes</h1>
           <p className="mt-2 text-stone-600">
-            {library.recipes.length} dinners, all free of fish, shellfish and nuts. Hearts are your favourites; the eye
+            {library.recipes.length} dinners, all free of shellfish and nuts. Fish is its own group and is left out when
+            the household ticks Fish. Hearts are your favourites; the eye
             turns a recipe on or off for your plans
             {hiddenCount ? ` (${hiddenCount} hidden)` : ""}.
           </p>

@@ -35,4 +35,4 @@ if (problems.length) {
   console.error(`\n${problems.length} problem(s):\n- ${problems.join("\n- ")}`);
   process.exit(1);
 }
-console.log("Library OK: no fish, shellfish or nuts; every dinner is within the calorie cap.");
+console.log("Library OK: no shellfish or nuts; fish is marked; every dinner is within the calorie cap.");

@@ -20,6 +20,7 @@ const PROTEIN_LABELS: Record<Protein, string> = {
   pork: "Pork",
   turkey: "Turkey",
   lamb: "Lamb",
+  fish: "Fish",
   egg: "Egg",
   veggie: "Veggie (no meat)",
 };
@@ -177,7 +178,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
       return setNewIngError("Add calories, protein, carbs and fat from the label (0 if none).");
     }
     const banned = ingredientProblems(ing);
-    if (banned.length) return setNewIngError(`${banned[0]}. Fish, crustaceans, molluscs and nuts stay out of every dinner.`);
+    if (banned.length) return setNewIngError(`${banned[0]}. Crustaceans, molluscs and nuts stay out of every dinner.`);
     setNewIngredients((list) => [...list, ing]);
     if (creatingFor !== null) updateRow(creatingFor, { id: ing.id });
     setCreatingFor(null);
@@ -554,7 +555,8 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
             </ul>
           )}
           <p className="mt-4 text-xs text-stone-500">
-            Must be free of fish, shellfish and nuts and under {KCAL_CAP.toLocaleString()} kcal per serving.
+            Must be free of shellfish and nuts and under {KCAL_CAP.toLocaleString()} kcal per serving. Mark any fish
+            with the fish allergen.
           </p>
         </div>
         <button

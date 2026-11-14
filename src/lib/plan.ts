@@ -154,6 +154,7 @@ async function repairSlots(
       pick = pool.find((r) => !quickNight || isQuick(r)) ?? pool[0];
       if (pick.category === "fakeaway") role = "fakeaway";
       else if (pick.category === "hearty") role = "hearty";
+      else if (pick.category === "fish") role = "fish";
       else role = "extra";
     }
     if (!pick) continue;

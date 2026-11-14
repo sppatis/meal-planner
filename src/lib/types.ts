@@ -65,7 +65,7 @@ export interface Ingredient {
 
 export type IngredientMap = Record<string, Ingredient>;
 
-export type Category = "rice" | "pasta" | "potato" | "veggie" | "fakeaway" | "hearty" | "other";
+export type Category = "rice" | "pasta" | "potato" | "veggie" | "fish" | "fakeaway" | "hearty" | "other";
 
 export type Protein =
   | "chicken"
@@ -73,6 +73,7 @@ export type Protein =
   | "pork"
   | "turkey"
   | "lamb"
+  | "fish"
   | "egg"
   | "veggie";
 
@@ -108,7 +109,7 @@ export interface Recipe {
 export type Equipment = "hob" | "oven" | "microwave" | "airFryer";
 
 /** The role a slot fills in the weekly mix. */
-export type SlotRole = "rice" | "pasta" | "potato" | "veggie" | "fakeaway" | "hearty" | "extra";
+export type SlotRole = "rice" | "pasta" | "potato" | "veggie" | "fish" | "fakeaway" | "hearty" | "extra";
 
 export interface Plan {
   id: string;

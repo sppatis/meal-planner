@@ -238,7 +238,8 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
               </div>
             )}
             <p className="mt-6 rounded-2xl bg-stone-100 p-4 text-sm text-stone-600">
-              <b>Allergy check:</b> no fish, shellfish or nuts in this recipe. Always check labels on sauces and
+              <b>Allergy check:</b> shellfish and nuts are left out of every dinner. Fish is used only where it is
+              listed, and those dinners are skipped when the household ticks Fish. Always check labels on sauces and
               spice mixes, as recipes change.
             </p>
           </section>

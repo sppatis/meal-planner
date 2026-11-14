@@ -8,17 +8,8 @@ import { BUILTIN_LIBRARY } from "./library";
 import { nutritionPerServing } from "./nutrition";
 import type { Ingredient, IngredientMap, Recipe } from "./types";
 
-/** Words that indicate fish, shellfish or nuts, including common hidden sources. */
+/** Shellfish, nuts and other foods that stay out of the catalogue, including common hidden sources. */
 const BANNED = [
-  "fish",
-  "anchov",
-  "worcester",
-  "salmon",
-  "tuna",
-  "cod",
-  "haddock",
-  "mackerel",
-  "sardine",
   "prawn",
   "shrimp",
   "crab",
@@ -27,7 +18,6 @@ const BANNED = [
   "squid",
   "scallop",
   "oyster",
-  "caesar",
   "pesto",
   "pine nut",
   "satay",
@@ -49,10 +39,34 @@ const BANNED = [
   "nut oil",
 ];
 
+/** Fish is allowed only when an ingredient is marked with the fish allergen. */
+const FISH_WORDS = [
+  "anchov\\w*",
+  "salmon",
+  "tuna",
+  "cod",
+  "haddock",
+  "mackerel",
+  "sardines?",
+  "trout",
+  "pollock",
+  "plaice",
+  "hake",
+  "kippers?",
+  "worcester\\w*",
+  "sea ?bass",
+  "fish\\w*",
+];
+
 const bannedRe = new RegExp(`\\b(${BANNED.join("|")})`, "i");
+const fishRe = new RegExp(`\\b(${FISH_WORDS.join("|")})\\b`, "i");
 
 export function allergenMatch(text: string) {
   return text.match(bannedRe)?.[0];
+}
+
+export function fishMatch(text: string) {
+  return text.match(fishRe)?.[0];
 }
 
 export function ingredientProblems(ing: Ingredient): string[] {
@@ -60,7 +74,11 @@ export function ingredientProblems(ing: Ingredient): string[] {
   const banned = bannedAllergens(ing.allergens);
   if (banned.length) problems.push(`${ing.name} contains ${banned.join(", ")}`);
   const match = allergenMatch(ing.name);
-  if (match) problems.push(`${ing.name} looks like it contains fish or nuts ("${match}")`);
+  if (match) problems.push(`${ing.name} looks like it contains shellfish or nuts ("${match}")`);
+  const fish = fishMatch(ing.name);
+  if (fish && !ing.allergens?.includes("fish")) {
+    problems.push(`${ing.name} looks like fish ("${fish}") but is not marked with the fish allergen`);
+  }
   return problems;
 }
 
@@ -75,7 +93,10 @@ export function recipeProblems(recipe: Recipe, ingredients: IngredientMap = INGR
     ...recipe.ingredients.map((i) => i.note ?? ""),
   ].join(" ");
   const match = allergenMatch(text);
-  if (match) problems.push(`mentions "${match}", which could mean fish or nuts`);
+  if (match) problems.push(`mentions "${match}", which could mean shellfish or nuts`);
+  const fish = fishMatch(text);
+  const markedFish = recipe.ingredients.some((line) => ingredients[line.id]?.allergens?.includes("fish"));
+  if (fish && !markedFish) problems.push(`mentions "${fish}" but no ingredient is marked as fish`);
   if (/\bfan\b/i.test(text)) problems.push("uses a fan oven temperature (we have a gas oven)");
   if (/\boven to \d+C(?! \/ Gas \d)/.test(text)) problems.push("has an oven temperature without a gas mark");
 

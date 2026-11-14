@@ -363,8 +363,8 @@ export function PlanForm({ plan, isActive = false, allergies = [] }: Props) {
           Ingredients to leave out
         </label>
         <p className="mt-1 text-xs text-stone-500">
-          Type an ingredient and press Enter. Any dinner that uses it won&apos;t be planned. Fish and nuts are always left
-          out.
+          Type an ingredient and press Enter. Any dinner that uses it won&apos;t be planned. Shellfish and nuts are always
+          left out. Tick Fish on the household page to leave fish dinners out as well.
         </p>
         <input
           id="exclude"

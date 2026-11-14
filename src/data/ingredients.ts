@@ -60,6 +60,13 @@ const list: Ingredient[] = [
   ing("lamb-leg-steaks", "Lamb leg steaks", "g", 400, 5.25, "4 pack, 400g", MEAT, n(150, 21, 0, 7.3)),
   ing("gammon-joint", "Unsmoked gammon joint", "g", 750, 4.5, "750g", MEAT, n(138, 19, 0.5, 6.8)),
   ing("braising-steak", "Lean diced braising steak", "g", 400, 4.25, "400g", MEAT, n(130, 22, 0, 4.6)),
+  ing("salmon-fillet", "Skinless salmon fillets", "g", 360, 6.25, "2 fillets, 360g", MEAT, n(208, 20, 0, 13)),
+  ing("white-fish-fillet", "Skinless white fish fillets", "g", 400, 4.75, "400g", MEAT, n(82, 18, 0, 0.7), {
+    checkLabel: "Buy plain fillets, not breaded or battered. Coatings usually contain wheat.",
+  }),
+  ing("smoked-mackerel", "Smoked mackerel fillets", "g", 200, 2.5, "2 fillets, 200g", MEAT, n(305, 19, 0, 25), {
+    checkLabel: "Peppered mackerel can include wheat in the coating. Plain smoked fillets do not.",
+  }),
 
   // Dairy & eggs
   ing("eggs", "Free range medium eggs", "each", 12, 3.2, "12 pack", DAIRY, n(76, 7.3, 0, 5.2), { each: "egg" }),
@@ -147,6 +154,9 @@ const list: Ingredient[] = [
   ing("pineapple", "Pineapple chunks in juice", "g", 432, 0.85, "432g tin", TINS, n(55, 0.4, 13, 0.1, 0.8), {
     packNoun: "tin",
   }),
+  ing("tuna-spring-water", "Tuna chunks in spring water (drained)", "g", 240, 2.4, "2 x 145g tins, drained", TINS, n(113, 26, 0, 0.8), {
+    packNoun: "pack",
+  }),
   ing("tomato-puree", "Tomato purée", "tbsp", 13, 0.85, "200g tube", TINS, n(15, 0.7, 2.5, 0, 0.5), { staple: true }),
 
   // Cupboard: carbs
@@ -160,6 +170,22 @@ const list: Ingredient[] = [
   ing("fusilli", "Fusilli pasta", "g", 500, 0.75, "500g", CUPBOARD, n(357, 12.5, 72, 1.6, 3), { staple: true }),
   ing("orzo", "Orzo pasta", "g", 500, 1.0, "500g", CUPBOARD, n(357, 12.5, 72, 1.6, 3), { staple: true }),
   ing("lasagne-sheets", "Lasagne sheets", "g", 250, 0.8, "250g", CUPBOARD, n(357, 12.5, 72, 1.6, 3), { staple: true }),
+  ing("gf-penne", "Gluten free penne", "g", 500, 1.7, "500g", CUPBOARD, n(348, 6.5, 75, 1.4, 2.2), {
+    staple: true,
+    checkLabel: "Use a pack labelled gluten free. Ordinary wheat penne is not a swap.",
+  }),
+  ing("gf-spaghetti", "Gluten free spaghetti", "g", 500, 1.7, "500g", CUPBOARD, n(348, 6.5, 75, 1.4, 2.2), {
+    staple: true,
+    checkLabel: "Use a pack labelled gluten free. Ordinary wheat spaghetti is not a swap.",
+  }),
+  ing("gf-fusilli", "Gluten free fusilli", "g", 500, 1.7, "500g", CUPBOARD, n(348, 6.5, 75, 1.4, 2.2), {
+    staple: true,
+    checkLabel: "Use a pack labelled gluten free. Ordinary wheat fusilli is not a swap.",
+  }),
+  ing("rice-noodles", "Rice noodles", "g", 250, 1.15, "250g", CUPBOARD, n(360, 6, 82, 0.6, 1.2), {
+    staple: true,
+    checkLabel: "Choose rice noodles with no wheat. Egg noodles contain gluten.",
+  }),
   ing("egg-noodles", "Medium egg noodles", "g", 250, 0.95, "250g", CUPBOARD, n(360, 12.6, 68, 2.4, 3.5), {
     staple: true,
   }),
@@ -176,6 +202,10 @@ const list: Ingredient[] = [
   // Bakery
   ing("wraps", "Wholemeal tortilla wraps", "each", 8, 1.25, "8 pack", BAKERY, n(180, 5.5, 28, 3.5, 3.5), {
     each: "wholemeal wrap",
+  }),
+  ing("corn-tortillas", "Maize tortillas", "each", 8, 1.5, "8 pack", CUPBOARD, n(68, 1.5, 14, 0.8, 1.5), {
+    each: "maize tortilla",
+    checkLabel: "Buy tortillas made only from maize. Flour or wheat tortillas contain gluten.",
   }),
   ing("pitta", "Wholemeal pittas", "each", 6, 0.8, "6 pack", BAKERY, n(150, 6, 27, 1, 3.5), { each: "wholemeal pitta" }),
   ing("burger-buns", "Burger buns", "each", 6, 0.85, "6 pack", BAKERY, n(150, 5, 27, 2.5, 1.5), { each: "burger bun" }),
@@ -207,6 +237,10 @@ const list: Ingredient[] = [
     checkLabel: "A few gravy brands include fish-derived ingredients. Check the label.",
   }),
   ing("soy-sauce", "Light soy sauce", "tbsp", 10, 1.0, "150ml", CUPBOARD, n(8, 1.1, 0.7, 0), { staple: true }),
+  ing("tamari", "Tamari", "tbsp", 10, 2.4, "150ml", CUPBOARD, n(12, 1.9, 1, 0), {
+    staple: true,
+    checkLabel: "Use a tamari with no wheat in the ingredients. Ordinary soy sauce contains gluten.",
+  }),
   ing("honey", "Clear honey", "tbsp", 16, 1.2, "340g", CUPBOARD, n(64, 0, 17, 0), { staple: true }),
   ing("sweet-chilli", "Sweet chilli sauce", "tbsp", 19, 1.1, "290ml", CUPBOARD, n(35, 0, 8.5, 0), {
     staple: true,
@@ -256,6 +290,9 @@ const list: Ingredient[] = [
 
 /**
  * Products that contain wheat, barley or rye. Cornflour is maize and is not listed.
+ * Gluten free pasta, rice noodles, tamari and maize tortillas are not listed either:
+ * they are rice or maize, or a wheat-free soy sauce. Ordinary pasta, noodles, soy sauce
+ * and stock stay in this set.
  * Stock cubes, gravy, sausages, cornflakes and Quorn mince are here because the usual
  * UK versions contain wheat, not because every brand does.
  */
@@ -289,9 +326,14 @@ const GLUTEN_IDS = new Set([
 
 /**
  * Other UK 14 allergens in the usual supermarket product. Gluten is added from GLUTEN_IDS.
- * Fish, crustaceans, molluscs, peanuts, tree nuts, sesame and lupin are not in this catalogue.
+ * Fish is marked below. Crustaceans, molluscs, peanuts, tree nuts, sesame and lupin are not in this catalogue.
  */
 const OTHER_ALLERGENS: Record<string, Allergen[]> = {
+  "salmon-fillet": ["fish"],
+  "white-fish-fillet": ["fish"],
+  "smoked-mackerel": ["fish"],
+  "tuna-spring-water": ["fish"],
+  tamari: ["soya"],
   "halloumi-light": ["milk"],
   paneer: ["milk"],
   milk: ["milk"],

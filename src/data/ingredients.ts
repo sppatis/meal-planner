@@ -182,6 +182,10 @@ const list: Ingredient[] = [
     staple: true,
     checkLabel: "Use a pack labelled gluten free. Ordinary wheat fusilli is not a swap.",
   }),
+  ing("gf-lasagne-sheets", "Gluten free lasagne sheets", "g", 250, 1.9, "250g", CUPBOARD, n(348, 6.5, 75, 1.4, 2.2), {
+    staple: true,
+    checkLabel: "Use sheets labelled gluten free. Ordinary wheat lasagne sheets are not a swap.",
+  }),
   ing("rice-noodles", "Rice noodles", "g", 250, 1.15, "250g", CUPBOARD, n(360, 6, 82, 0.6, 1.2), {
     staple: true,
     checkLabel: "Choose rice noodles with no wheat. Egg noodles contain gluten.",
@@ -290,7 +294,7 @@ const list: Ingredient[] = [
 
 /**
  * Products that contain wheat, barley or rye. Cornflour is maize and is not listed.
- * Gluten free pasta, rice noodles, tamari and maize tortillas are not listed either:
+ * Gluten free pasta, gluten free lasagne sheets, rice noodles, tamari and maize tortillas are not listed either:
  * they are rice or maize, or a wheat-free soy sauce. Ordinary pasta, noodles, soy sauce
  * and stock stay in this set.
  * Stock cubes, gravy, sausages, cornflakes and Quorn mince are here because the usual

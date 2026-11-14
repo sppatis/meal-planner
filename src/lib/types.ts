@@ -11,7 +11,22 @@ export type Aisle =
   | "Tins & jars"
   | "Cupboard";
 
-export type Allergen = "fish" | "shellfish" | "nuts" | "peanuts";
+/** UK 14 allergens. Gluten is also recorded as `containsGluten` so older data still matches. */
+export type Allergen =
+  | "celery"
+  | "gluten"
+  | "crustaceans"
+  | "eggs"
+  | "fish"
+  | "lupin"
+  | "milk"
+  | "molluscs"
+  | "mustard"
+  | "nuts"
+  | "peanuts"
+  | "sesame"
+  | "soya"
+  | "sulphites";
 
 export interface Nutrition {
   kcal: number;

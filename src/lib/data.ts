@@ -47,7 +47,7 @@ export const NO_PLAN_SETTINGS = { people: SERVINGS, store: DEFAULT_STORE } satis
  */
 export async function loadAppData(plan?: Plan) {
   const fullLibrary = await loadLibrary();
-  const { hs, active } = await loadPlanList();
+  const { hs, active, household } = await loadPlanList();
   const current = plan ?? active;
   const settings = current ?? NO_PLAN_SETTINGS;
   const [slots, ratings, manualFavourites, hidden, photos, prices] = await Promise.all([
@@ -80,5 +80,6 @@ export async function loadAppData(plan?: Plan) {
     hidden,
     coverPhotos,
     prices,
+    allergies: household.allergies,
   };
 }

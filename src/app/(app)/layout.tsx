@@ -3,6 +3,7 @@ import { LibraryProvider } from "@/components/library-provider";
 import { SiteNav } from "@/components/site-nav";
 import { authRequired } from "@/lib/auth-token";
 import { loadCustom, loadPlanList } from "@/lib/data";
+import { photoUrl } from "@/lib/store/photo-files";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const [custom, { household, active }] = await Promise.all([loadCustom(), loadPlanList()]);
@@ -16,7 +17,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </span>
             <span className="block text-lg font-bold">Dinner Planner</span>
           </Link>
-          <SiteNav householdName={household.name} canSignOut={authRequired()} />
+          <SiteNav
+            householdName={household.name}
+            avatarUrl={household.avatarFile ? photoUrl(household.avatarFile) : null}
+            canSignOut={authRequired()}
+          />
         </div>
       </header>
       <div className="flex-1">{children}</div>

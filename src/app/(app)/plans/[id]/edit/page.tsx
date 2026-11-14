@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Edit plan" };
 
 export default async function EditPlanPage({ params }: PageProps<"/plans/[id]/edit">) {
   const { id } = await params;
-  const { plans, active } = await loadPlanList();
+  const { plans, active, household } = await loadPlanList();
   const plan = plans.find((p) => p.id === id);
   if (!plan) notFound();
 
@@ -18,7 +18,7 @@ export default async function EditPlanPage({ params }: PageProps<"/plans/[id]/ed
         ← All plans
       </Link>
       <h1 className="mt-3 text-3xl font-bold">Edit {plan.title}</h1>
-      <PlanForm plan={plan} isActive={plan.id === active?.id} />
+      <PlanForm plan={plan} isActive={plan.id === active?.id} allergies={household.allergies} />
     </main>
   );
 }

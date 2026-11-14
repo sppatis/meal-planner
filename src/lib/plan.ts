@@ -3,11 +3,12 @@ import { DEFAULT_QUICK_DAYS, SERVINGS } from "./constants";
 import { weekCost, type PriceOverrides } from "./cost";
 import { planDates, weekDates, weekOf } from "./dates";
 import { planLibrary } from "./exclusions";
-import { fitsSlot, generatePlan } from "./generator";
+import { fitsSlot, generatePlan, isQuickNight } from "./generator";
 import type { Library } from "./library";
+import { isQuick } from "./nutrition";
 import { store, type HouseholdStore } from "./store";
 import { DEFAULT_STORE, effectivePrices, isStoreId } from "./stores";
-import type { IngredientMap, MealSlot, Plan, Recipe } from "./types";
+import type { Allergen, IngredientMap, MealSlot, Plan, Recipe } from "./types";
 
 /**
  * Fills in settings added after a plan was saved: quick nights (Monday to Wednesday) and
@@ -45,15 +46,24 @@ export async function planPrices(plan: Pick<Plan, "store">, ingredients: Ingredi
   return effectivePrices(ingredients, plan.store, corrections, tesco);
 }
 
-/** The plan's recipe library, scaled and with household-hidden and left-out recipes removed. */
+async function householdAllergies(hs: HouseholdStore): Promise<Allergen[]> {
+  return (await store.getHousehold(hs.householdId))?.allergies ?? [];
+}
+
+/** The plan's recipe library, scaled and with household-hidden, left-out and allergen recipes removed. */
 export async function recipesForPlan(hs: HouseholdStore, plan: Plan, library: Library): Promise<Library> {
-  return planLibrary(library, plan, await hs.getHiddenRecipes());
+  const [hidden, allergies] = await Promise.all([hs.getHiddenRecipes(), householdAllergies(hs)]);
+  return planLibrary(library, plan, hidden, allergies);
 }
 
 /** Generates every week of a plan from scratch without saving. */
 export async function generateFullPlan(hs: HouseholdStore, plan: Plan, library: Library, seed?: number) {
-  const [prices, usable] = await Promise.all([planPrices(plan, library.ingredients), recipesForPlan(hs, plan, library)]);
-  return generatePlan({ plan, prices, library: usable, seed });
+  const [prices, usable, avoiding] = await Promise.all([
+    planPrices(plan, library.ingredients),
+    recipesForPlan(hs, plan, library),
+    householdAllergies(hs),
+  ]);
+  return generatePlan({ plan, prices, library: usable, seed, avoiding });
 }
 
 /** Builds and saves every week of a plan from scratch. */
@@ -65,9 +75,13 @@ export async function buildPlan(hs: HouseholdStore, plan: Plan, library: Library
 
 /** Loads a plan's dinners, generating them the first time and repairing any that no longer fit. */
 export async function ensurePlanSlots(hs: HouseholdStore, plan: Plan, library: Library): Promise<MealSlot[]> {
-  const [slots, usable] = await Promise.all([hs.getSlots(plan.id), recipesForPlan(hs, plan, library)]);
+  const [slots, usable, allergies] = await Promise.all([
+    hs.getSlots(plan.id),
+    recipesForPlan(hs, plan, library),
+    householdAllergies(hs),
+  ]);
   if (!slots.length) return buildPlan(hs, plan, library);
-  return repairSlots(hs, plan, slots, usable);
+  return repairSlots(hs, plan, slots, usable, allergies);
 }
 
 /**
@@ -75,7 +89,13 @@ export async function ensurePlanSlots(hs: HouseholdStore, plan: Plan, library: L
  * for a quick night, preferring the recipe's named successor and otherwise the least-planned recipe
  * that fits the slot and budget.
  */
-async function repairSlots(hs: HouseholdStore, plan: Plan, slots: MealSlot[], library: Library): Promise<MealSlot[]> {
+async function repairSlots(
+  hs: HouseholdStore,
+  plan: Plan,
+  slots: MealSlot[],
+  library: Library,
+  allergies: readonly Allergen[],
+): Promise<MealSlot[]> {
   const fits = (s: MealSlot) => {
     const r = library.bySlug[s.recipeSlug];
     return !!r && fitsSlot(r, s.role, s.date, plan.quickDays);
@@ -118,12 +138,23 @@ async function repairSlots(hs: HouseholdStore, plan: Plan, slots: MealSlot[], li
       usable(successor) && costWith(successor) <= budget
         ? successor
         : (options[0]?.r ?? (usable(successor) ? successor : undefined));
-    // A celiac plan never keeps an unsafe dinner. If its group has no safe recipe, the night becomes mix-it-up.
-    if (!pick && plan.celiacSafe && slot.role !== "extra") {
+    // A group with nothing safe becomes a mix-it-up night, the same fallback a tight plan uses.
+    if (!pick && allergies.length && slot.role !== "extra") {
       const mix = (r: Recipe | undefined): r is Recipe =>
         !!r && fitsSlot(r, "extra", slot.date, plan.quickDays) && !inWeek.has(r.slug);
       pick = library.recipes.filter(mix).sort((a, b) => a.slug.localeCompare(b.slug))[0];
       if (pick) role = "extra";
+    }
+    // Still unsafe, and mix-it-up could not take the night (a quick night, or every safe dinner already used).
+    // Repeat a safe dinner rather than keep one that contains an allergen the household avoids.
+    if (!pick && !library.bySlug[slot.recipeSlug] && library.recipes.length) {
+      const unused = library.recipes.filter((r) => !inWeek.has(r.slug));
+      const pool = (unused.length ? unused : library.recipes).slice().sort((a, b) => a.slug.localeCompare(b.slug));
+      const quickNight = isQuickNight(slot.date, plan.quickDays);
+      pick = pool.find((r) => !quickNight || isQuick(r)) ?? pool[0];
+      if (pick.category === "fakeaway") role = "fakeaway";
+      else if (pick.category === "hearty") role = "hearty";
+      else role = "extra";
     }
     if (!pick) continue;
     const roleChanged = role !== slot.role;

@@ -33,7 +33,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const { slug } = await params;
   const { date, plan: planParam } = await searchParams;
   const fullLibrary = await loadLibrary();
-  const { hs, active } = await loadPlanList();
+  const { hs, active, household } = await loadPlanList();
   const plan = (typeof planParam === "string" ? await findPlan(planParam) : undefined) ?? active;
   const { people, store: shopId } = plan ?? NO_PLAN_SETTINGS;
   const library = scaledLibrary(fullLibrary, people);
@@ -75,7 +75,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[recipe.category].chip}`}>
             {CATEGORY_LABELS[recipe.category]}
           </span>
-          {plan?.celiacSafe && recipe.celiacSafe && <CeliacChip size="md" />}
+          {household.allergies.includes("gluten") && recipe.celiacSafe && <CeliacChip size="md" />}
           {isQuick(recipe) && (
             <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">Quick</span>
           )}

@@ -6,11 +6,12 @@ import { useMemo, useState, useTransition } from "react";
 import { saveRecipe, type RecipeDraft } from "@/app/actions";
 import { CATEGORY_LABELS, KCAL_CAP, QUICK_MAX_MINS, SERVINGS } from "@/lib/constants";
 import { AISLE_ORDER, gbp, recipeCost } from "@/lib/cost";
+import { ALLERGENS, ALLERGEN_LABELS } from "@/lib/allergens";
 import { glutenIn } from "@/lib/celiac";
 import { slugify } from "@/lib/library";
 import { nutritionPerServing } from "@/lib/nutrition";
-import type { Aisle, Category, Ingredient, Protein, Recipe, Unit } from "@/lib/types";
-import { recipeProblems } from "@/lib/validate";
+import type { Aisle, Allergen, Category, Ingredient, Protein, Recipe, Unit } from "@/lib/types";
+import { ingredientProblems, recipeProblems } from "@/lib/validate";
 import { useLibrary } from "./library-provider";
 
 const PROTEIN_LABELS: Record<Protein, string> = {
@@ -46,7 +47,7 @@ interface NewIngredientFields {
   packPrice: string;
   packLabel: string;
   staple: boolean;
-  containsGluten: boolean;
+  allergens: Allergen[];
   kcal: string;
   protein: string;
   carbs: string;
@@ -62,7 +63,7 @@ const BLANK_INGREDIENT: NewIngredientFields = {
   packPrice: "",
   packLabel: "",
   staple: false,
-  containsGluten: false,
+  allergens: [],
   kcal: "",
   protein: "",
   carbs: "",
@@ -157,7 +158,8 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
       packLabel: f.packLabel.trim() || `${f.packSize}${f.unit === "each" ? "" : f.unit}`,
       aisle: f.aisle,
       staple: f.staple || undefined,
-      containsGluten: f.containsGluten || undefined,
+      ...(f.allergens.length ? { allergens: f.allergens } : {}),
+      containsGluten: f.allergens.includes("gluten") || undefined,
       per: {
         kcal: toNum(f.kcal),
         protein: toNum(f.protein),
@@ -174,6 +176,8 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
     if (![kcal, p, carbs, fat].every((v) => v >= 0)) {
       return setNewIngError("Add calories, protein, carbs and fat from the label (0 if none).");
     }
+    const banned = ingredientProblems(ing);
+    if (banned.length) return setNewIngError(`${banned[0]}. Fish, crustaceans, molluscs and nuts stay out of every dinner.`);
     setNewIngredients((list) => [...list, ing]);
     if (creatingFor !== null) updateRow(creatingFor, { id: ing.id });
     setCreatingFor(null);
@@ -432,15 +436,29 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
                   <input type="checkbox" checked={newIng.staple} onChange={(e) => setNewIng({ ...newIng, staple: e.target.checked })} />
                   Cupboard staple
                 </label>
-                <label className="flex items-center gap-2 self-end pb-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={newIng.containsGluten}
-                    onChange={(e) => setNewIng({ ...newIng, containsGluten: e.target.checked })}
-                  />
-                  Contains gluten
-                </label>
               </div>
+              <fieldset>
+                <legend className={label}>Allergens in this ingredient</legend>
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  {ALLERGENS.map((a) => (
+                    <label key={a} className="flex items-center gap-1.5 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={newIng.allergens.includes(a)}
+                        onChange={() =>
+                          setNewIng((current) => ({
+                            ...current,
+                            allergens: current.allergens.includes(a)
+                              ? current.allergens.filter((x) => x !== a)
+                              : [...current.allergens, a],
+                          }))
+                        }
+                      />
+                      {ALLERGEN_LABELS[a]}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
                 {(["kcal", "protein", "carbs", "fat", "fibre"] as const).map((k) => (
                   <div key={k}>

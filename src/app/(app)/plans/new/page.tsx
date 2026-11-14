@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PlanForm } from "@/components/plan-form";
+import { loadPlanList } from "@/lib/data";
 
 export const metadata: Metadata = { title: "New plan" };
 
-export default function NewPlanPage() {
+export default async function NewPlanPage() {
+  const { household } = await loadPlanList();
   return (
     <main className="mx-auto max-w-4xl px-4 pb-16">
       <Link href="/plans" className="mt-4 inline-block text-sm text-stone-500 hover:text-emerald-700">
@@ -15,7 +17,7 @@ export default function NewPlanPage() {
         Dinners are planned automatically for every week, with quick meals on the nights you pick and a fake-away on
         Friday or Saturday.
       </p>
-      <PlanForm />
+      <PlanForm allergies={household.allergies} />
     </main>
   );
 }

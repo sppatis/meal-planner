@@ -1,7 +1,8 @@
+import { blockedByAllergies } from "./allergens";
 import { SERVINGS } from "./constants";
 import type { Library } from "./library";
 import { scaleRecipe } from "./scale";
-import type { IngredientMap, Plan, Recipe } from "./types";
+import type { Allergen, IngredientMap, Plan, Recipe } from "./types";
 
 /** Lower-cased, trimmed, with a trailing plural dropped so "mushrooms" also matches "mushroom". */
 export function normaliseTerm(term: string) {
@@ -36,14 +37,14 @@ export function excludedBy(recipe: Recipe, terms: string[], ingredients: Ingredi
  */
 export function planLibrary(
   library: Library,
-  plan: Pick<Plan, "excluded"> & Partial<Pick<Plan, "people" | "excludedCategories" | "celiacSafe">>,
+  plan: Pick<Plan, "excluded"> & Partial<Pick<Plan, "people" | "excludedCategories">>,
   hidden: Iterable<string> = [],
+  allergies: readonly Allergen[] = [],
 ): Library {
   const people = plan.people ?? SERVINGS;
   const hide = hidden instanceof Set ? hidden : new Set(hidden);
   const excludedCats = new Set(plan.excludedCategories ?? []);
-  const celiacOnly = plan.celiacSafe === true;
-  if (!plan.excluded.length && people === SERVINGS && hide.size === 0 && excludedCats.size === 0 && !celiacOnly) {
+  if (!plan.excluded.length && people === SERVINGS && hide.size === 0 && excludedCats.size === 0 && allergies.length === 0) {
     return library;
   }
   const recipes = library.recipes
@@ -51,7 +52,7 @@ export function planLibrary(
       (r) =>
         !hide.has(r.slug) &&
         !excludedCats.has(r.category) &&
-        !(celiacOnly && !r.celiacSafe) &&
+        !blockedByAllergies(r, library.ingredients, allergies) &&
         !excludedBy(r, plan.excluded, library.ingredients),
     )
     .map((r) => scaleRecipe(r, people, library.ingredients));

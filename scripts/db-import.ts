@@ -67,10 +67,12 @@ async function main() {
   await sql.begin(async (tx) => {
     if (flag("replace")) await tx.unsafe(`truncate ${[...DATA_TABLES, "households"].join(", ")}`);
     for (const h of db.households) {
-      await tx`insert into households (id, name, passcode_hash, session_version, created_at)
-        values (${h.id}, ${h.name}, ${h.passcodeHash}, ${h.sessionVersion}, ${h.createdAt})
+      await tx`insert into households (id, name, passcode_hash, session_version, created_at, allergies, avatar_file)
+        values (${h.id}, ${h.name}, ${h.passcodeHash}, ${h.sessionVersion}, ${h.createdAt},
+          ${tx.json(h.allergies)}, ${h.avatarFile})
         on conflict (id) do update set name = excluded.name, passcode_hash = excluded.passcode_hash,
-          session_version = excluded.session_version`;
+          session_version = excluded.session_version, allergies = excluded.allergies,
+          avatar_file = excluded.avatar_file`;
     }
     for (const { householdId, ...plan } of db.plans) {
       await tx`insert into plans (household_id, id, data) values (${householdId}, ${plan.id}, ${tx.json(plan as never)})`;

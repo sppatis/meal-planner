@@ -2,9 +2,10 @@ import { weekCost, type PriceOverrides } from "./cost";
 import { addDays, dayIndex, weekDates, weekOf, type PlanSpan } from "./dates";
 import { BUILTIN_LIBRARY, type Library } from "./library";
 import { isQuick } from "./nutrition";
-import type { Category, MealSlot, Plan, Recipe, SlotRole } from "./types";
+import { listAllergens } from "./allergens";
+import type { Allergen, Category, MealSlot, Plan, Recipe, SlotRole } from "./types";
 
-type GeneratorPlan = PlanSpan & Pick<Plan, "weeklyBudget" | "quickDays"> & Partial<Pick<Plan, "celiacSafe">>;
+type GeneratorPlan = PlanSpan & Pick<Plan, "weeklyBudget" | "quickDays">;
 
 /** Recipes can't come back within this many weeks either side. Relaxed if no plan fits. */
 const VARIETY_WINDOWS = [3, 2, 1];
@@ -75,6 +76,8 @@ interface GenerateOptions {
   prices?: PriceOverrides;
   seed?: number;
   library?: Library;
+  /** Household allergens, named in the error when a week cannot be filled. */
+  avoiding?: readonly Allergen[];
 }
 
 export function generatePlan(opts: GenerateOptions): MealSlot[] {
@@ -83,7 +86,7 @@ export function generatePlan(opts: GenerateOptions): MealSlot[] {
   const regenerate = new Set(weeks);
   const rng = mulberry32(opts.seed ?? 20261102);
   const library = opts.library ?? BUILTIN_LIBRARY;
-  const ctx: WeekContext = { plan, byDate: new Map(), prices: opts.prices ?? {}, rng, library };
+  const ctx: WeekContext = { plan, byDate: new Map(), prices: opts.prices ?? {}, rng, library, avoiding: opts.avoiding ?? [] };
   const byDate = ctx.byDate;
 
   for (const slot of opts.existing ?? []) {
@@ -106,6 +109,7 @@ interface WeekContext {
   prices: PriceOverrides;
   rng: Rng;
   library: Library;
+  avoiding: readonly Allergen[];
 }
 
 function usedNear(plan: PlanSpan, week: number, window: number, byDate: Map<string, MealSlot>) {
@@ -117,7 +121,7 @@ function usedNear(plan: PlanSpan, week: number, window: number, byDate: Map<stri
   return used;
 }
 
-function generateWeek(week: number, { plan, byDate, prices, rng, library }: WeekContext): MealSlot[] {
+function generateWeek(week: number, { plan, byDate, prices, rng, library, avoiding }: WeekContext): MealSlot[] {
   const dates = weekDates(plan, week);
   const before = byDate.get(addDays(dates[0], -1));
   const after = byDate.get(addDays(dates[6], 1));
@@ -142,7 +146,7 @@ function generateWeek(week: number, { plan, byDate, prices, rng, library }: Week
   }
   if (cheapest) return cheapest.slots;
   const hints = ["leaving out fewer ingredients"];
-  if (plan.celiacSafe) hints.push("turning off celiac safe only");
+  if (avoiding.length) hints.push(`unticking ${listAllergens(avoiding)} on the household page`);
   if (plan.quickDays.length) hints.push("choosing fewer quick nights");
   const tryWhat = hints.join(", ").replace(/, ([^,]*)$/, " or $1");
   throw new PlanGenerationError(`Couldn't fit 7 different dinners into week ${week + 1}. Try ${tryWhat}.`);

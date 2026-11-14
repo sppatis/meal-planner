@@ -43,6 +43,18 @@ export async function replaceSlot(planId: string, date: string, recipeSlug: stri
   refreshAll();
 }
 
+/** Skip a dinner on the active plan, or put the same dinner back on the shopping list. The slot keeps its recipe. */
+export async function setSlotSkipped(planId: string, date: string, skipped: boolean) {
+  if (typeof skipped !== "boolean") throw new Error("Invalid skip");
+  const { hs, active } = await loadPlanList();
+  if (!active || active.id !== planId) throw new Error("Only the active plan can skip a dinner");
+  if (weekOf(active, date) === null) throw new Error("Date is outside the plan");
+  const slots = await hs.getSlots(active.id);
+  if (!slots.some((s) => s.date === date)) throw new Error("No dinner on that day");
+  await hs.setSlotSkipped(active.id, date, skipped);
+  refreshAll();
+}
+
 export async function regenerateWeek(planId: string, week: number) {
   const hs = await householdStore();
   const plan = await requirePlan(planId);

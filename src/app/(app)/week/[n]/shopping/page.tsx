@@ -6,7 +6,7 @@ import { Checklist } from "@/components/checklist";
 import { CopyButton } from "@/components/copy-button";
 import { PrintButton } from "@/components/print-button";
 import { DAY_NAMES } from "@/lib/constants";
-import { AISLE_ORDER, gbp, priceOf, shoppingList, type ShoppingLine } from "@/lib/cost";
+import { AISLE_ORDER, gbp, priceOf, recipesToBuy, shoppingList, type ShoppingLine } from "@/lib/cost";
 import { dayIndex, formatDate, weekDates } from "@/lib/dates";
 import { scaledLibrary } from "@/lib/exclusions";
 import { formatQty } from "@/lib/format";
@@ -40,8 +40,9 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
   ]);
   const library = scaledLibrary(fullLibrary, plan.people);
   const weekSlots = groupByWeek(plan, slots, library)[week];
-  const recipes = weekSlots.map((s) => library.bySlug[s.recipeSlug]);
+  const recipes = recipesToBuy(weekSlots, library.bySlug);
   const list = shoppingList(recipes, prices, library.ingredients);
+  const skipped = weekSlots.filter((s) => s.skipped);
   const dates = weekDates(plan, week);
 
   const fresh = list.lines.filter((l) => l.packs !== null);
@@ -61,6 +62,9 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
     "",
     "CUPBOARD CHECK",
     ...staples.map((l) => `- ${l.ingredient.name} (need ${formatQty(l.ingredient, l.qty)})`),
+    ...(skipped.length
+      ? ["", "SKIPPED", ...skipped.map((s) => `- ${DAY_NAMES[dayIndex(s.date)]}: ${library.bySlug[s.recipeSlug].name}`)]
+      : []),
   ].join("\n");
 
   const toItem = (l: ShoppingLine) => ({
@@ -102,12 +106,22 @@ export default async function ShoppingPage({ params, searchParams }: PageProps<"
 
       <section className="mt-6">
         <h2 className="text-lg font-bold">This week&apos;s dinners</h2>
+        {skipped.length > 0 && (
+          <p className="mt-1 text-xs text-stone-500">Skipped dinners stay on the plan and are left off this list.</p>
+        )}
         <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
           {weekSlots.map((s) => (
             <li key={s.date}>
               <Link href={`/recipe/${s.recipeSlug}?plan=${plan.id}&date=${s.date}`} className="flex gap-2 hover:text-emerald-700">
                 <span className="w-24 shrink-0 text-stone-500">{DAY_NAMES[dayIndex(s.date)]}</span>
-                <span>{library.bySlug[s.recipeSlug].name}</span>
+                <span className={s.skipped ? "text-stone-400" : undefined}>
+                  {library.bySlug[s.recipeSlug].name}
+                  {s.skipped && (
+                    <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+                      Skipped
+                    </span>
+                  )}
+                </span>
               </Link>
             </li>
           ))}

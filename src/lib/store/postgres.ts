@@ -100,10 +100,15 @@ function householdStore(h: string): HouseholdStore {
 
     async getSlots(planId) {
       const sql = await getSql();
-      const rows = await sql<{ date: string; role: MealSlot["role"]; recipe_slug: string }[]>`
-        select date::text as date, role, recipe_slug from meal_slots
+      const rows = await sql<{ date: string; role: MealSlot["role"]; recipe_slug: string; skipped: boolean }[]>`
+        select date::text as date, role, recipe_slug, skipped from meal_slots
         where household_id = ${h} and plan_id = ${planId} order by date`;
-      return rows.map((r) => ({ date: r.date, role: r.role, recipeSlug: r.recipe_slug }));
+      return rows.map((r) => ({
+        date: r.date,
+        role: r.role,
+        recipeSlug: r.recipe_slug,
+        ...(r.skipped ? { skipped: true } : {}),
+      }));
     },
     async replaceSlots(planId, dates, slots) {
       const sql = await getSql();
@@ -119,10 +124,11 @@ function householdStore(h: string): HouseholdStore {
             date: s.date,
             role: s.role,
             recipe_slug: s.recipeSlug,
+            skipped: s.skipped === true,
           }));
-          await tx`insert into meal_slots ${tx(rows, "household_id", "plan_id", "date", "role", "recipe_slug")}
+          await tx`insert into meal_slots ${tx(rows, "household_id", "plan_id", "date", "role", "recipe_slug", "skipped")}
             on conflict (household_id, plan_id, date)
-            do update set role = excluded.role, recipe_slug = excluded.recipe_slug`;
+            do update set role = excluded.role, recipe_slug = excluded.recipe_slug, skipped = excluded.skipped`;
         }
       });
     },
@@ -135,6 +141,11 @@ function householdStore(h: string): HouseholdStore {
         await sql`update meal_slots set recipe_slug = ${recipeSlug}
           where household_id = ${h} and plan_id = ${planId} and date = ${date}`;
       }
+    },
+    async setSlotSkipped(planId, date, skipped) {
+      const sql = await getSql();
+      await sql`update meal_slots set skipped = ${skipped}
+        where household_id = ${h} and plan_id = ${planId} and date = ${date}`;
     },
 
     async getRatings() {

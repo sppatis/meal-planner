@@ -134,4 +134,9 @@ export const MIGRATIONS: string[] = [
       and coalesce((p.data->>'celiacSafe')::boolean, false)
   );
   `,
+
+  // 7: a skipped dinner stays on its day and is left off the shopping list.
+  `
+  alter table meal_slots add column skipped boolean not null default false;
+  `,
 ];

@@ -5,7 +5,7 @@ import { MealCard } from "@/components/meal-card";
 import { RegenerateWeekButton } from "@/components/regenerate-week-button";
 import { ScrollToWeek } from "@/components/scroll-to-week";
 import { CATEGORY_LABELS, KCAL_CAP } from "@/lib/constants";
-import { gbp, weekCost } from "@/lib/cost";
+import { gbp, recipesToBuy, weekCost } from "@/lib/cost";
 import { daysBetween, formatDate, listDays, planEnd, todayISO, weekDates, weekOf } from "@/lib/dates";
 import { loadAppData } from "@/lib/data";
 import { nutritionPerServing } from "@/lib/nutrition";
@@ -27,13 +27,7 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
   const daysToGo = daysBetween(today, end);
   const started = today >= plan.startDate;
 
-  const costs = weeks.map((w) =>
-    weekCost(
-      w.map((s) => library.bySlug[s.recipeSlug]),
-      prices,
-      library.ingredients,
-    ),
-  );
+  const costs = weeks.map((w) => weekCost(recipesToBuy(w, library.bySlug), prices, library.ingredients));
   const planned = weeks.flat();
   const avgKcal = planned.length
     ? Math.round(
@@ -162,6 +156,7 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
                   ratings={ratings}
                   prices={prices}
                   allergies={allergies}
+                  isActive={isActive}
                 />
               ))}
             </div>

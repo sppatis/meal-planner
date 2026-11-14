@@ -34,6 +34,23 @@ export interface ShoppingList {
 }
 
 /**
+ * Recipes to buy. A skipped slot keeps its dinner on the plan and is omitted here,
+ * so turning skip off puts that dinner's ingredients back on the list.
+ */
+export function recipesToBuy(
+  slots: readonly { skipped?: boolean; recipeSlug: string }[],
+  bySlug: Readonly<Record<string, Recipe | undefined>>,
+): Recipe[] {
+  const recipes: Recipe[] = [];
+  for (const slot of slots) {
+    if (slot.skipped) continue;
+    const recipe = bySlug[slot.recipeSlug];
+    if (recipe) recipes.push(recipe);
+  }
+  return recipes;
+}
+
+/**
  * Fresh items are costed in whole packs. Cupboard staples (rice, pasta, spices, sauces)
  * last for weeks, so only the share used this week is counted.
  */

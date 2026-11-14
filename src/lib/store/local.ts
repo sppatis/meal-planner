@@ -70,12 +70,17 @@ export function normaliseLocalDb(raw: any): LocalDb {
     households: storedHouseholds.map((h: Household) => toHousehold(h, plans)),
     plans: (raw.plans ?? []).map((p: StoredPlan) => ({ ...p, householdId: p.householdId ?? HOME_HOUSEHOLD })),
     activePlanIds: raw.activePlanIds ?? (raw.activePlanId ? { [HOME_HOUSEHOLD]: raw.activePlanId } : {}),
-    slots: (raw.slots ?? []).map((s: StoredSlot) => ({
-      ...s,
-      householdId: s.householdId ?? HOME_HOUSEHOLD,
-      // Dinners saved before plans existed belong to the original plan.
-      planId: s.planId ?? ORIGINAL_PLAN_ID,
-    })),
+    slots: (raw.slots ?? []).map((s: StoredSlot) => {
+      const slot: StoredSlot = {
+        ...s,
+        householdId: s.householdId ?? HOME_HOUSEHOLD,
+        // Dinners saved before plans existed belong to the original plan.
+        planId: s.planId ?? ORIGINAL_PLAN_ID,
+      };
+      // Only an explicit skip is kept. Older files have no flag, which means the dinner is on the list.
+      if (slot.skipped !== true) delete slot.skipped;
+      return slot;
+    }),
     ratings: flatRatings ? { [HOME_HOUSEHOLD]: raw.ratings } : (raw.ratings ?? {}),
     favourites: Array.isArray(raw.favourites) ? { [HOME_HOUSEHOLD]: raw.favourites } : (raw.favourites ?? {}),
     hiddenRecipes: raw.hiddenRecipes ?? {},
@@ -158,7 +163,12 @@ function householdStore(h: string): HouseholdStore {
     async getSlots(planId) {
       return (await read()).slots
         .filter((s) => s.householdId === h && s.planId === planId)
-        .map(({ date, role, recipeSlug }) => ({ date, role, recipeSlug }))
+        .map(({ date, role, recipeSlug, skipped }) => ({
+          date,
+          role,
+          recipeSlug,
+          ...(skipped ? { skipped: true } : {}),
+        }))
         .sort((a, b) => a.date.localeCompare(b.date));
     },
     async replaceSlots(planId, dates, slots) {
@@ -177,6 +187,14 @@ function householdStore(h: string): HouseholdStore {
           slot.recipeSlug = recipeSlug;
           if (role) slot.role = role;
         }
+      });
+    },
+    async setSlotSkipped(planId, date, skipped) {
+      await update((db) => {
+        const slot = db.slots.find((s) => s.householdId === h && s.planId === planId && s.date === date);
+        if (!slot) return;
+        if (skipped) slot.skipped = true;
+        else delete slot.skipped;
       });
     },
 

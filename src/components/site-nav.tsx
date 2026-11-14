@@ -19,11 +19,11 @@ function Avatar({ name, url }: { name: string; url: string | null }) {
   if (url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={url} alt="" className="h-7 w-7 rounded-full object-cover ring-1 ring-stone-200" />
+      <img src={url} alt="" className="h-16 w-16 shrink-0 rounded-full object-cover ring-1 ring-stone-200" />
     );
   }
   return (
-    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">
+    <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-800">
       {name.slice(0, 1).toUpperCase()}
     </span>
   );

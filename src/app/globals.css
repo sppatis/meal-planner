@@ -15,6 +15,13 @@ html {
   scroll-padding-top: calc(var(--header-h) + 3.5rem);
 }
 
+/* The desktop bar holds a 4rem household avatar beside the name. */
+@media (min-width: 48rem) {
+  :root {
+    --header-h: 5rem;
+  }
+}
+
 /* Stop the page scrolling behind an open drawer or dialog. */
 html:has(dialog:modal) {
   overflow: hidden;

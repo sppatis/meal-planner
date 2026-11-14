@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { NutritionPanel } from "@/components/nutrition-panel";
+import { usesAllergen } from "@/lib/allergens";
 import { CATEGORY_LABELS, SERVINGS } from "@/lib/constants";
 import { loadLibrary } from "@/lib/data";
 import { nutritionPerServing } from "@/lib/nutrition";
@@ -38,7 +39,13 @@ export default async function ShareRecipePage({ params }: PageProps<"/share/reci
     url: `${base}/share/recipe/${slug}`,
     ...(photoUrls.length ? { image: photoUrls } : {}),
     recipeCategory: "Dinner",
-    keywords: [CATEGORY_LABELS[recipe.category], "fish free", "nut free", "low calorie"].join(", "),
+    keywords: [
+      CATEGORY_LABELS[recipe.category],
+      usesAllergen(recipe, library.ingredients, "fish") ? "fish" : "fish free",
+      "shellfish free",
+      "nut free",
+      "low calorie",
+    ].join(", "),
     recipeYield: [String(SERVINGS), `${SERVINGS} servings`],
     prepTime: `PT${recipe.prepMins}M`,
     cookTime: `PT${recipe.cookMins}M`,

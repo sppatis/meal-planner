@@ -11,7 +11,7 @@ type GeneratorPlan = PlanSpan & Pick<Plan, "weeklyBudget" | "quickDays">;
 const VARIETY_WINDOWS = [3, 2, 1];
 const ATTEMPTS_PER_WINDOW = 400;
 const MAX_PER_CATEGORY = 2;
-const MEAT_PROTEINS = new Set(["chicken", "beef", "pork", "turkey", "lamb"]);
+const CLASHING_PROTEINS = new Set(["chicken", "beef", "pork", "turkey", "lamb", "fish"]);
 
 export function isQuickNight(date: string, quickDays: number[]) {
   return quickDays.includes(dayIndex(date));
@@ -57,12 +57,13 @@ export function fitsSlot(recipe: Recipe, role: SlotRole, date: string, quickDays
   // Any Sunday can be a Sunday dinner, including slots planned before Hearty Meals existed.
   if (recipe.category === "hearty") return role === "hearty" || dayIndex(date) === SUNDAY;
   if (role === "fakeaway") return recipe.category === "fakeaway";
-  if (role === "extra") return recipe.category !== "fakeaway";
+  // Fish has its own night. It does not fill a mix-it-up slot.
+  if (role === "extra") return recipe.category !== "fakeaway" && recipe.category !== "fish";
   return recipe.category === (role as Category);
 }
 
 function clashesProtein(a: Recipe | undefined, b: Recipe | undefined) {
-  return !!a && !!b && a.protein === b.protein && MEAT_PROTEINS.has(a.protein);
+  return !!a && !!b && a.protein === b.protein && CLASHING_PROTEINS.has(a.protein);
 }
 
 export class PlanGenerationError extends Error {}
@@ -162,12 +163,15 @@ function tryWeek(
   library: Library,
   maxPerCategory: number,
 ): MealSlot[] | null {
-  // Categories with no recipes left (e.g. everything with rice excluded) become "mix it up" nights.
+  // Categories with no recipes left (e.g. everything with rice excluded, or no fish a household can eat)
+  // become "mix it up" nights.
   const has = (c: Category) => library.recipes.some((r) => r.category === c);
   // Few fake-aways are quick, so put it on Friday or Saturday, whichever isn't a quick night.
   const fakeawayDays = [4, 5].filter((d) => !quickDays.includes(d));
   const fakeawayDay = fakeawayDays.length === 1 ? fakeawayDays[0] : rng() < 0.5 ? 4 : 5;
-  const roles = shuffle<SlotRole>(["rice", "pasta", "potato", "veggie", "extra", "extra"], rng).map((r) =>
+  // One night each for rice, pasta, potato, veggie and fish, plus a mix-it-up night.
+  // Sunday dinner takes that mix-it-up night when a roast fits.
+  const roles = shuffle<SlotRole>(["rice", "pasta", "potato", "veggie", "fish", "extra"], rng).map((r) =>
     r === "extra" || has(r as Category) ? r : "extra",
   );
   // Roasts take too long for a quick night, so Sunday falls back to the usual mix.

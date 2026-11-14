@@ -35,8 +35,11 @@ export const ALLERGEN_LABELS: Record<Allergen, string> = {
   sulphites: "Sulphites",
 };
 
-/** Still banned from the built-in catalogue and from household recipes. */
-export const BANNED_ALLERGENS = ["fish", "crustaceans", "molluscs", "nuts", "peanuts"] as const satisfies readonly Allergen[];
+/**
+ * Still banned from the built-in catalogue and from household recipes.
+ * Fish is allowed in the catalogue. A household that ticks Fish never has it planned.
+ */
+export const BANNED_ALLERGENS = ["crustaceans", "molluscs", "nuts", "peanuts"] as const satisfies readonly Allergen[];
 
 const ALLERGEN_SET = new Set<string>(ALLERGENS);
 const BANNED_SET = new Set<string>(BANNED_ALLERGENS);
@@ -54,6 +57,15 @@ export function listAllergens(allergies: readonly Allergen[]) {
   const names = allergies.map((a) => ALLERGEN_LABELS[a].toLowerCase());
   if (names.length < 2) return names[0] ?? "";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
+/** True when a recipe uses an ingredient carrying this allergen. Gluten matches `containsGluten` too. */
+export function usesAllergen(
+  recipe: Pick<Recipe, "ingredients">,
+  ingredients: IngredientMap,
+  allergen: Allergen,
+): boolean {
+  return blockedByAllergies(recipe, ingredients, [allergen]);
 }
 
 /** True when a recipe uses an ingredient carrying one of the selected allergens. */

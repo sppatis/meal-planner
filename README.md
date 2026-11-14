@@ -3,10 +3,12 @@
 Dinner plans for any household size. The original plan, **Road to Australia**, feeds three for 20 weeks (Mon 2 Nov
 2026 to Sun 21 Mar 2027) at Tesco; you can add more plans with their own number of people and supermarket.
 
-- Every dinner is free of fish, shellfish and nuts, and under 1,000 kcal per person.
-- Each week has a rice dish, pasta dish, potato dish, veggie option, a Friday or Saturday fake-away, a Sunday dinner
-  from the **Hearty Meals** group (roasts, toad in the hole, braised beef and so on) and an extra. If Sunday is a quick
-  night, or the plan leaves Hearty Meals out, Sunday gets a second extra instead.
+- Every dinner is free of shellfish and nuts, and under 1,000 kcal per person. Fish dinners are planned unless the
+  household ticks Fish.
+- Each week has a rice dish, pasta dish, potato dish, veggie option, fish dish, a Friday or Saturday fake-away and a
+  Sunday dinner from the **Hearty Meals** group (roasts, toad in the hole, braised beef and so on). If Sunday is a quick
+  night, or the plan leaves Hearty Meals out, that night is a mix-it-up extra instead. If Fish is left out, or no fish
+  dinner is safe for the household, the fish night becomes a mix-it-up extra too.
 - Each plan has its own quick nights (Monday to Wednesday by default), which get dinners ready in 25 minutes or less.
 - Each plan chooses how many people it feeds (1–10) and where they shop. Recipe amounts, shopping lists and costs
   scale to that headcount. Pack prices are estimated from the Tesco catalogue with a rough price level per
@@ -36,7 +38,8 @@ Dinner plans for any household size. The original plan, **Road to Australia**, f
 - **Our recipes**: on Recipes, tap **Add a recipe** to add your own. Write ingredients for 3 people (plans scale them)
   from the Tesco-priced catalogue (or add a new one with its pack price and label nutrition) and the calories, cost,
   shopping list and MyFitnessPal page are worked out the same way as the built-in recipes. Saving is blocked if it
-  mentions fish or nuts or goes over 1,000 kcal. Your recipes always appear as favourites in **Replace**, and can be
+  mentions shellfish or nuts, uses fish without marking it, or goes over 1,000 kcal. Your recipes always appear as
+  favourites in **Replace**, and can be
   edited or deleted from their page.
 - **Shopping list** (per week): combined list grouped by aisle, with a separate cupboard check for staples, scaled to
   the plan's people and linked to its supermarket. Ticks are remembered on each phone.

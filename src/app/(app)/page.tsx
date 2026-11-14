@@ -14,8 +14,8 @@ export default async function HomePage() {
         <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Start a new plan</h1>
         <p className="mt-3 max-w-xl text-emerald-50/90">
           Choose how many people you&apos;re feeding, where you shop and your weekly budget. You&apos;ll get a dinner for
-          every night: no fish, no nuts and under {KCAL_CAP.toLocaleString()} kcal each, with a shopping list for every
-          week.
+          every night, with shellfish and nuts left out and under {KCAL_CAP.toLocaleString()} kcal each, plus a shopping
+          list for every week. Fish dinners are included unless the household avoids fish.
         </p>
         <Link
           href="/plans/new"

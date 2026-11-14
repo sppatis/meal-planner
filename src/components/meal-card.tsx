@@ -50,10 +50,7 @@ export function MealCard({
       }`}
     >
       <div className="flex items-baseline justify-between px-3 pt-3">
-        <p className="text-sm font-semibold">
-          {DAY_NAMES[day]}
-          {isToday && <span className="ml-1.5 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] text-white">TODAY</span>}
-        </p>
+        <p className="text-sm font-semibold">{DAY_NAMES[day]}</p>
         <p className="text-xs text-stone-500">{formatDate(slot.date)}</p>
       </div>
       <p className={`mx-3 mt-1 min-h-5 text-[11px] font-medium ${quickNight ? "text-sky-700" : "text-transparent"}`}>
@@ -68,7 +65,7 @@ export function MealCard({
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${CATEGORY_STYLE[recipe.category].chip}`}>
               {ROLE_LABELS[recipe.category === "hearty" ? "hearty" : slot.role]}
             </span>
-            {recipe.celiacSafe && <CeliacChip />}
+            {plan.celiacSafe && recipe.celiacSafe && <CeliacChip />}
             {recipe.custom && (
               <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[11px] font-semibold text-teal-800">Ours</span>
             )}

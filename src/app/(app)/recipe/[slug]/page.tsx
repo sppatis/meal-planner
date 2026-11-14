@@ -75,7 +75,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[recipe.category].chip}`}>
             {CATEGORY_LABELS[recipe.category]}
           </span>
-          {recipe.celiacSafe && <CeliacChip size="md" />}
+          {plan?.celiacSafe && recipe.celiacSafe && <CeliacChip size="md" />}
           {isQuick(recipe) && (
             <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">Quick</span>
           )}

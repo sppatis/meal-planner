@@ -10,7 +10,6 @@ import {
   CATEGORY_LABELS,
   DAY_NAMES,
   DAY_SHORT,
-  DEFAULT_QUICK_DAYS,
   DEFAULT_WEEKLY_BUDGET,
   MAX_PLAN_WEEKS,
   QUICK_MAX_MINS,
@@ -54,7 +53,8 @@ export function PlanForm({ plan, isActive = false, allergies = [] }: Props) {
   const [excluded, setExcluded] = useState<string[]>(plan?.excluded ?? []);
   const [excludedCategories, setExcludedCategories] = useState<Category[]>(plan?.excludedCategories ?? []);
   const [term, setTerm] = useState("");
-  const [quickDays, setQuickDays] = useState<number[]>(plan?.quickDays ?? DEFAULT_QUICK_DAYS);
+  // A new plan starts with none selected. An existing plan shows the nights it saved.
+  const [quickDays, setQuickDays] = useState<number[]>(plan?.quickDays ?? []);
   const [makeActive, setMakeActive] = useState(!plan);
   const [rebuild, setRebuild] = useState(false);
 

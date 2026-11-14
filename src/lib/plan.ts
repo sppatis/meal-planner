@@ -14,7 +14,7 @@ import type { IngredientMap, MealSlot, Plan, Recipe } from "./types";
  * people and supermarket (3 at Tesco), which is how those plans were always planned.
  */
 export function withPlanDefaults(
-  plan: Partial<Plan> & Omit<Plan, "quickDays" | "people" | "store" | "excludedCategories">,
+  plan: Partial<Plan> & Omit<Plan, "quickDays" | "people" | "store" | "excludedCategories" | "celiacSafe">,
 ): Plan {
   return {
     ...plan,
@@ -22,6 +22,7 @@ export function withPlanDefaults(
     people: plan.people ?? SERVINGS,
     store: isStoreId(plan.store) ? plan.store : DEFAULT_STORE,
     excludedCategories: plan.excludedCategories ?? [],
+    celiacSafe: plan.celiacSafe === true,
   };
 }
 
@@ -112,15 +113,25 @@ async function repairSlots(hs: HouseholdStore, plan: Plan, slots: MealSlot[], li
           (counts.get(a.r.slug) ?? 0) - (counts.get(b.r.slug) ?? 0) ||
           a.r.slug.localeCompare(b.r.slug),
       );
-    const pick =
+    let role = slot.role;
+    let pick =
       usable(successor) && costWith(successor) <= budget
         ? successor
         : (options[0]?.r ?? (usable(successor) ? successor : undefined));
+    // A celiac plan never keeps an unsafe dinner. If its group has no safe recipe, the night becomes mix-it-up.
+    if (!pick && plan.celiacSafe && slot.role !== "extra") {
+      const mix = (r: Recipe | undefined): r is Recipe =>
+        !!r && fitsSlot(r, "extra", slot.date, plan.quickDays) && !inWeek.has(r.slug);
+      pick = library.recipes.filter(mix).sort((a, b) => a.slug.localeCompare(b.slug))[0];
+      if (pick) role = "extra";
+    }
     if (!pick) continue;
+    const roleChanged = role !== slot.role;
+    slot.role = role;
 
     counts.set(pick.slug, (counts.get(pick.slug) ?? 0) + 1);
     slot.recipeSlug = pick.slug;
-    await hs.setSlotRecipe(plan.id, slot.date, pick.slug);
+    await hs.setSlotRecipe(plan.id, slot.date, pick.slug, roleChanged ? role : undefined);
   }
   return repaired;
 }

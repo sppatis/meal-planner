@@ -4,6 +4,7 @@ import { gbp, recipeCost, type PriceOverrides } from "@/lib/cost";
 import { dayIndex, formatDate } from "@/lib/dates";
 import { nutritionPerServing, totalMins } from "@/lib/nutrition";
 import type { IngredientMap, MealSlot, Plan, Recipe } from "@/lib/types";
+import { CeliacChip } from "./celiac-chip";
 import { CATEGORY_STYLE } from "./category-style";
 import { RecipeArt } from "./recipe-art";
 import { StarDisplay } from "./stars";
@@ -67,6 +68,7 @@ export function MealCard({
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${CATEGORY_STYLE[recipe.category].chip}`}>
               {ROLE_LABELS[recipe.category === "hearty" ? "hearty" : slot.role]}
             </span>
+            {recipe.celiacSafe && <CeliacChip />}
             {recipe.custom && (
               <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[11px] font-semibold text-teal-800">Ours</span>
             )}
@@ -104,6 +106,7 @@ export function MealCard({
           budget={plan.weeklyBudget}
           excluded={plan.excluded}
           excludedCategories={plan.excludedCategories}
+          celiacSafe={plan.celiacSafe}
           people={plan.people}
           quickDays={plan.quickDays}
           date={slot.date}

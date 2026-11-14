@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { saveRecipe, type RecipeDraft } from "@/app/actions";
 import { CATEGORY_LABELS, KCAL_CAP, QUICK_MAX_MINS, SERVINGS } from "@/lib/constants";
 import { AISLE_ORDER, gbp, recipeCost } from "@/lib/cost";
+import { glutenIn } from "@/lib/celiac";
 import { slugify } from "@/lib/library";
 import { nutritionPerServing } from "@/lib/nutrition";
 import type { Aisle, Category, Ingredient, Protein, Recipe, Unit } from "@/lib/types";
@@ -45,6 +46,7 @@ interface NewIngredientFields {
   packPrice: string;
   packLabel: string;
   staple: boolean;
+  containsGluten: boolean;
   kcal: string;
   protein: string;
   carbs: string;
@@ -60,6 +62,7 @@ const BLANK_INGREDIENT: NewIngredientFields = {
   packPrice: "",
   packLabel: "",
   staple: false,
+  containsGluten: false,
   kcal: "",
   protein: "",
   carbs: "",
@@ -93,6 +96,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
   const [steps, setSteps] = useState(recipe?.steps.join("\n") ?? "");
   const [tip, setTip] = useState(recipe?.tip ?? "");
   const [airFryer, setAirFryer] = useState(recipe?.airFryer?.join("\n") ?? "");
+  const [celiacSafe, setCeliacSafe] = useState(recipe?.celiacSafe === true);
   const [newIngredients, setNewIngredients] = useState<Ingredient[]>([]);
   const [creatingFor, setCreatingFor] = useState<number | null>(null);
   const [newIng, setNewIng] = useState<NewIngredientFields>(BLANK_INGREDIENT);
@@ -124,6 +128,12 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
     tip: tip || undefined,
     airFryer: airFryer.split("\n").map((s) => s.trim()).filter(Boolean),
   };
+  const glutenNames = glutenIn(
+    { ingredients: draft.ingredients },
+    ingredients,
+  ).map((i) => i.name);
+  const canBeSafe = glutenNames.length === 0;
+  draft.celiacSafe = canBeSafe && celiacSafe;
 
   const preview: Recipe = { ...draft, slug: draft.slug ?? "preview", airFryer: draft.airFryer?.length ? draft.airFryer : undefined };
   const filled = { ...preview, ingredients: preview.ingredients.filter((l) => l.qty > 0) };
@@ -147,6 +157,7 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
       packLabel: f.packLabel.trim() || `${f.packSize}${f.unit === "each" ? "" : f.unit}`,
       aisle: f.aisle,
       staple: f.staple || undefined,
+      containsGluten: f.containsGluten || undefined,
       per: {
         kcal: toNum(f.kcal),
         protein: toNum(f.protein),
@@ -261,6 +272,23 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
             &quot;Mix it up&quot; dinners can go on any night. Recipes ready in {QUICK_MAX_MINS} minutes or less can be used on
             quick nights.
           </p>
+          <label className={`flex items-start gap-2 text-sm ${canBeSafe ? "" : "text-stone-400"}`}>
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={canBeSafe && celiacSafe}
+              disabled={!canBeSafe}
+              onChange={(e) => setCeliacSafe(e.target.checked)}
+            />
+            <span>
+              Celiac safe
+              <span className="mt-0.5 block text-xs text-stone-500">
+                {canBeSafe
+                  ? "Tick this only when you have checked the recipe uses no gluten."
+                  : `Can't be marked safe because it uses ${glutenNames.join(", ")}, which ${glutenNames.length === 1 ? "contains" : "contain"} gluten.`}
+              </span>
+            </span>
+          </label>
         </section>
 
         <section className="card p-5">
@@ -403,6 +431,14 @@ export function RecipeForm({ recipe }: { recipe?: Recipe }) {
                 <label className="flex items-center gap-2 self-end pb-2 text-sm">
                   <input type="checkbox" checked={newIng.staple} onChange={(e) => setNewIng({ ...newIng, staple: e.target.checked })} />
                   Cupboard staple
+                </label>
+                <label className="flex items-center gap-2 self-end pb-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={newIng.containsGluten}
+                    onChange={(e) => setNewIng({ ...newIng, containsGluten: e.target.checked })}
+                  />
+                  Contains gluten
                 </label>
               </div>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">

@@ -65,7 +65,8 @@ export async function PlanView({ plan: requested }: { plan?: Plan }) {
             {daysToGo > 0 ? `${daysToGo} days to go` : "All done. Well played!"}
           </h1>
           <p className="mt-2 max-w-xl text-emerald-50/90">
-            {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"} of lighter dinners for {plan.people}: no fish, no nuts,
+            {plan.weeks} {plan.weeks === 1 ? "week" : "weeks"} of lighter dinners for {plan.people}
+            {plan.celiacSafe ? ", every one celiac safe" : ""}: no fish, no nuts,
             under {KCAL_CAP.toLocaleString()} kcal each, and {gbp(plan.weeklyBudget).replace(".00", "")} a week at{" "}
             {storeName(plan.store)}.
             {plan.quickDays.length > 0 && ` Quick dinners on ${listDays(plan.quickDays)}.`}

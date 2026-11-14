@@ -81,6 +81,7 @@ export default async function PlansPage() {
                   </p>
                   <p className="mt-1 text-sm text-stone-600">
                     {plan.quickDays.length ? `Quick nights: ${listDays(plan.quickDays)}` : "No quick nights"}
+                    {plan.celiacSafe ? " · Celiac safe only" : ""}
                   </p>
                   {(plan.excludedCategories.length > 0 || plan.excluded.length > 0) && (
                     <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">

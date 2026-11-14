@@ -1,5 +1,6 @@
 import { INGREDIENTS } from "@/data/ingredients";
 import { RECIPES } from "@/data/recipes";
+import { confirmCeliac } from "./celiac";
 import type { Ingredient, IngredientMap, Recipe } from "./types";
 
 /** Built-in recipes and ingredients plus the household's own. */
@@ -13,11 +14,14 @@ export interface Library {
 export const CUSTOM_PREFIX = "my-";
 
 export function buildLibrary(customRecipes: Recipe[] = [], customIngredients: Ingredient[] = []): Library {
-  const recipes = [...RECIPES, ...customRecipes.map((r) => ({ ...r, custom: true }))];
+  const ingredients = { ...INGREDIENTS, ...Object.fromEntries(customIngredients.map((i) => [i.id, { ...i, custom: true }])) };
+  const recipes = [...RECIPES, ...customRecipes.map((r) => ({ ...r, custom: true }))].map((r) =>
+    confirmCeliac(r, ingredients),
+  );
   return {
     recipes,
     bySlug: Object.fromEntries(recipes.map((r) => [r.slug, r])),
-    ingredients: { ...INGREDIENTS, ...Object.fromEntries(customIngredients.map((i) => [i.id, { ...i, custom: true }])) },
+    ingredients,
   };
 }
 

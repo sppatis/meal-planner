@@ -16,6 +16,7 @@ interface Props {
   budget: number;
   excluded: string[];
   excludedCategories: Category[];
+  celiacSafe?: boolean;
   people: number;
   quickDays: number[];
   date: string;
@@ -41,6 +42,7 @@ export function SwapButton(props: Props) {
     budget,
     excluded,
     excludedCategories,
+    celiacSafe,
     people,
     quickDays,
     date,
@@ -56,8 +58,8 @@ export function SwapButton(props: Props) {
   // The week may hold dinners the plan now excludes, so costs come from the whole library at the plan's size.
   const fullLibrary = useMemo(() => scaledLibrary(sharedLibrary, people), [sharedLibrary, people]);
   const library = useMemo(
-    () => planLibrary(sharedLibrary, { excluded, excludedCategories, people }, hidden),
-    [sharedLibrary, excluded, excludedCategories, people, hidden],
+    () => planLibrary(sharedLibrary, { excluded, excludedCategories, people, celiacSafe }, hidden),
+    [sharedLibrary, excluded, excludedCategories, people, celiacSafe, hidden],
   );
 
   const options = useMemo(() => {

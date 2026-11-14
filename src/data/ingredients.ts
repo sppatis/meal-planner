@@ -253,6 +253,38 @@ const list: Ingredient[] = [
   ing("cinnamon", "Ground cinnamon", "tsp", 20, 0.85, "38g", CUPBOARD, n(6, 0.1, 1.9, 0), { staple: true }),
 ];
 
-export const INGREDIENTS: Record<string, Ingredient> = Object.fromEntries(list.map((i) => [i.id, i]));
+/**
+ * Products that contain wheat, barley or rye. Cornflour is maize and is not listed.
+ * Stock cubes, gravy, sausages and cornflakes are here because the usual UK versions
+ * contain wheat or barley malt, not because every brand does.
+ */
+const GLUTEN_IDS = new Set([
+  "sausages",
+  "chorizo",
+  "penne",
+  "spaghetti",
+  "fusilli",
+  "orzo",
+  "lasagne-sheets",
+  "egg-noodles",
+  "couscous",
+  "plain-flour",
+  "panko",
+  "cornflakes",
+  "stuffing-mix",
+  "wraps",
+  "pitta",
+  "burger-buns",
+  "mini-naan",
+  "pizza-base",
+  "baguette",
+  "chicken-stock",
+  "veg-stock",
+  "beef-stock",
+  "gravy-granules",
+  "soy-sauce",
+]);
 
-export const INGREDIENT_LIST = list;
+export const INGREDIENT_LIST = list.map((i) => (GLUTEN_IDS.has(i.id) ? { ...i, containsGluten: true } : i));
+
+export const INGREDIENTS: Record<string, Ingredient> = Object.fromEntries(INGREDIENT_LIST.map((i) => [i.id, i]));

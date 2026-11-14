@@ -40,6 +40,8 @@ export interface Ingredient {
   /** Shown when a recipe uses whole packs, e.g. "2 tins". */
   packNoun?: string;
   allergens?: Allergen[];
+  /** Wheat, barley, rye, or a product that contains them (pasta, flour, soy sauce, standard stock). */
+  containsGluten?: boolean;
   /** Brand-dependent risk that should be checked on the label. */
   checkLabel?: string;
   /** Added by the household rather than built in. */
@@ -82,6 +84,8 @@ export interface Recipe {
   airFryer?: string[];
   /** Added by the household rather than built in. */
   custom?: boolean;
+  /** Confirmed to use no gluten-containing ingredient. Never inferred from the recipe name. */
+  celiacSafe?: boolean;
   /** Set when quantities have been scaled from 3 to a plan's number of people. */
   servings?: number;
 }
@@ -102,6 +106,8 @@ export interface Plan {
   excluded: string[];
   /** Recipe groups left out of planning (rice, pasta, …). Empty means every group is allowed. */
   excludedCategories: Category[];
+  /** When set, every dinner must be a celiac-safe recipe. */
+  celiacSafe: boolean;
   /** Weekdays (0 = Monday) that need a quick dinner. */
   quickDays: number[];
   /** Number of people eating; recipe quantities and costs scale to this. */

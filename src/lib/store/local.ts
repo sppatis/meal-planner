@@ -152,10 +152,13 @@ function householdStore(h: string): HouseholdStore {
         ];
       });
     },
-    async setSlotRecipe(planId, date, recipeSlug) {
+    async setSlotRecipe(planId, date, recipeSlug, role) {
       await update((db) => {
         const slot = db.slots.find((s) => s.householdId === h && s.planId === planId && s.date === date);
-        if (slot) slot.recipeSlug = recipeSlug;
+        if (slot) {
+          slot.recipeSlug = recipeSlug;
+          if (role) slot.role = role;
+        }
       });
     },
 

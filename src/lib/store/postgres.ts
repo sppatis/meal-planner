@@ -125,10 +125,15 @@ function householdStore(h: string): HouseholdStore {
         }
       });
     },
-    async setSlotRecipe(planId, date, recipeSlug) {
+    async setSlotRecipe(planId, date, recipeSlug, role) {
       const sql = await getSql();
-      await sql`update meal_slots set recipe_slug = ${recipeSlug}
-        where household_id = ${h} and plan_id = ${planId} and date = ${date}`;
+      if (role) {
+        await sql`update meal_slots set recipe_slug = ${recipeSlug}, role = ${role}
+          where household_id = ${h} and plan_id = ${planId} and date = ${date}`;
+      } else {
+        await sql`update meal_slots set recipe_slug = ${recipeSlug}
+          where household_id = ${h} and plan_id = ${planId} and date = ${date}`;
+      }
     },
 
     async getRatings() {

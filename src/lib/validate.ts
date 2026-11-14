@@ -1,7 +1,9 @@
 import { INGREDIENTS } from "@/data/ingredients";
 import { RECIPES } from "@/data/recipes";
 import { AIR_FRYER } from "@/data/recipes/air-fryer";
+import { glutenIn } from "./celiac";
 import { KCAL_CAP } from "./constants";
+import { BUILTIN_LIBRARY } from "./library";
 import { nutritionPerServing } from "./nutrition";
 import type { Ingredient, IngredientMap, Recipe } from "./types";
 
@@ -84,6 +86,12 @@ export function recipeProblems(recipe: Recipe, ingredients: IngredientMap = INGR
 
   const { kcal } = nutritionPerServing(recipe, ingredients);
   if (kcal > KCAL_CAP) problems.push(`is ${kcal} kcal per serving (cap ${KCAL_CAP})`);
+  if (recipe.celiacSafe) {
+    const gluten = glutenIn(recipe, ingredients);
+    if (gluten.length) {
+      problems.push(`is marked celiac safe but uses ${gluten.map((i) => i.name).join(", ")}, which contain gluten`);
+    }
+  }
   return problems;
 }
 
@@ -102,6 +110,17 @@ export function validateLibrary(): string[] {
   }
   for (const slug of Object.keys(AIR_FRYER)) {
     if (!slugs.has(slug)) problems.push(`Air fryer method for unknown recipe ${slug}`);
+  }
+
+  for (const recipe of BUILTIN_LIBRARY.recipes) {
+    if (recipe.custom) continue;
+    const gluten = glutenIn(recipe, INGREDIENTS);
+    if (gluten.length && recipe.celiacSafe) {
+      problems.push(`${recipe.slug} is marked celiac safe but uses gluten`);
+    }
+    if (!gluten.length && !recipe.celiacSafe) {
+      problems.push(`${recipe.slug} has no gluten ingredients but is not marked celiac safe`);
+    }
   }
   return problems;
 }

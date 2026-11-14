@@ -29,7 +29,7 @@ export interface HouseholdStore {
   getSlots(planId: string): Promise<MealSlot[]>;
   /** Replace the plan's slots whose dates fall within `dates` with `slots`. */
   replaceSlots(planId: string, dates: string[], slots: MealSlot[]): Promise<void>;
-  setSlotRecipe(planId: string, date: string, recipeSlug: string): Promise<void>;
+  setSlotRecipe(planId: string, date: string, recipeSlug: string, role?: MealSlot["role"]): Promise<void>;
 
   getRatings(): Promise<Record<string, number>>;
   setRating(recipeSlug: string, stars: number): Promise<void>;

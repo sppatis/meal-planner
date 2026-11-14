@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CATEGORY_STYLE } from "@/components/category-style";
+import { CeliacChip } from "@/components/celiac-chip";
 import { Checklist } from "@/components/checklist";
 import { DeleteRecipeButton } from "@/components/delete-recipe-button";
 import { FavouriteButton } from "@/components/favourite-button";
@@ -74,6 +75,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CATEGORY_STYLE[recipe.category].chip}`}>
             {CATEGORY_LABELS[recipe.category]}
           </span>
+          {recipe.celiacSafe && <CeliacChip size="md" />}
           {isQuick(recipe) && (
             <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">Quick</span>
           )}

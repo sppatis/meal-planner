@@ -50,6 +50,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
   const [budgetEdited, setBudgetEdited] = useState(!!plan);
   const [excluded, setExcluded] = useState<string[]>(plan?.excluded ?? []);
   const [excludedCategories, setExcludedCategories] = useState<Category[]>(plan?.excludedCategories ?? []);
+  const [celiacSafe, setCeliacSafe] = useState(plan?.celiacSafe ?? false);
   const [term, setTerm] = useState("");
   const [quickDays, setQuickDays] = useState<number[]>(plan?.quickDays ?? DEFAULT_QUICK_DAYS);
   const [makeActive, setMakeActive] = useState(!plan);
@@ -72,13 +73,16 @@ export function PlanForm({ plan, isActive = false }: Props) {
     [library, excluded],
   );
   const includedCategories = ALL_CATEGORIES.filter((c) => !excludedCategories.includes(c));
+  const blocked = (r: (typeof library.recipes)[number]) =>
+    leftOut.some((x) => x.recipe === r) || (celiacSafe && !r.celiacSafe);
   const emptied = includedCategories.filter(
     (c) =>
-      library.recipes.some((r) => r.category === c) && !library.recipes.some((r) => r.category === c && !leftOut.some((x) => x.recipe === r)),
+      library.recipes.some((r) => r.category === c) && !library.recipes.some((r) => r.category === c && !blocked(r)),
   );
   const quickRecipes = library.recipes.filter(
-    (r) => isQuick(r) && !excludedCategories.includes(r.category) && !leftOut.some((x) => x.recipe === r),
+    (r) => isQuick(r) && !excludedCategories.includes(r.category) && !blocked(r),
   );
+  const safeCount = library.recipes.filter((r) => !excludedCategories.includes(r.category) && !blocked(r)).length;
   const quickFakeaways = quickRecipes.filter((r) => r.category === "fakeaway").length;
 
   function toggleDay(day: number) {
@@ -114,6 +118,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
       weeklyBudget: Number(budget),
       excluded: pendingTerm ? [...excluded, pendingTerm.toLowerCase()] : excluded,
       excludedCategories,
+      celiacSafe,
       quickDays,
       people: Number(people),
       store: shop,
@@ -298,7 +303,42 @@ export function PlanForm({ plan, isActive = false }: Props) {
       </fieldset>
 
       <section className="card p-5">
-        <h2 className="font-bold">Recipe groups</h2>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-bold">Celiac safe only</h2>
+            <p className="mt-1 text-xs text-stone-500">
+              When this is on, every dinner is one marked Celiac safe. A night whose group has no safe recipe becomes
+              a &quot;mix it up&quot; dinner, and an unsafe recipe is never chosen.
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-pressed={celiacSafe}
+            onClick={() => setCeliacSafe((on) => !on)}
+            className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold ring-1 transition ${
+              celiacSafe
+                ? "bg-lime-200 text-lime-950 ring-lime-300 hover:bg-lime-300"
+                : "bg-white text-stone-600 ring-stone-300 hover:ring-lime-400"
+            }`}
+          >
+            {celiacSafe ? "On" : "Off"}
+          </button>
+        </div>
+        {celiacSafe && (
+          <div className="mt-2 text-xs text-stone-600">
+            <p>
+              {safeCount} celiac-safe {safeCount === 1 ? "dinner" : "dinners"} can be used
+              {safeCount < 7 ? ", which is not enough for a full week." : "."}
+            </p>
+            {emptied.length > 0 && (
+              <p className="mt-1 text-amber-700">
+                No celiac-safe {emptied.map((c) => CATEGORY_LABELS[c].toLowerCase()).join(" or ")} dinners are left, so
+                those nights will be &quot;mix it up&quot; dinners instead.
+              </p>
+            )}
+          </div>
+        )}
+        <h2 className="mt-5 font-bold">Recipe groups</h2>
         <p className="mt-1 text-xs text-stone-500">
           Groups in the plan appear as lozenges. Remove one to leave that whole group out of recipe selection; nights
           that would have used it become &quot;mix it up&quot; instead. Add a group back from the list below.
@@ -414,7 +454,7 @@ export function PlanForm({ plan, isActive = false }: Props) {
                   &quot;{t}&quot; doesn&apos;t match any ingredient in the recipes.
                 </p>
               ))}
-            {emptied.length > 0 && (
+            {emptied.length > 0 && !celiacSafe && (
               <p className="mt-1 text-amber-700">
                 No {emptied.map((c) => CATEGORY_LABELS[c].toLowerCase()).join(" or ")} dinners are left, so those nights
                 will be &quot;mix it up&quot; dinners instead.
@@ -443,9 +483,10 @@ export function PlanForm({ plan, isActive = false }: Props) {
                 Re-plan every dinner with these settings
               </label>
               <p className="mt-1 pl-6 text-xs text-stone-500">
-                Otherwise your current dinners are kept, and only ones using a left-out ingredient or recipe group, or
-                too slow for a quick night, are swapped. Tick this after changing the budget, people, supermarket or
-                recipe groups, so the dinners are chosen to fit the new weekly cost.
+                Otherwise your current dinners are kept, and only ones using a left-out ingredient or recipe group, that
+                are not celiac safe when that is on, or too slow for a quick night, are swapped. Tick this after
+                changing the budget, people, supermarket, recipe groups or the celiac setting, so the dinners are
+                chosen to fit the new weekly cost.
               </p>
             </>
           )}

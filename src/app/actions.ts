@@ -83,6 +83,8 @@ export interface PlanDraft {
   excluded: string[];
   /** Recipe groups to leave out of planning. */
   excludedCategories: string[];
+  /** Every dinner must be a celiac-safe recipe. */
+  celiacSafe: boolean;
   quickDays: number[];
   people: number;
   store: string;
@@ -149,6 +151,7 @@ export async function savePlan(draft: PlanDraft): Promise<SavePlanResult> {
     weeklyBudget,
     excluded,
     excludedCategories,
+    celiacSafe: draft.celiacSafe === true,
     quickDays,
     people,
     store: storeId,
@@ -251,6 +254,8 @@ export interface RecipeDraft {
   steps: string[];
   tip?: string;
   airFryer?: string[];
+  /** Set only when every ingredient is free of gluten. */
+  celiacSafe?: boolean;
 }
 
 export type SaveRecipeResult = { ok: true; slug: string } | { ok: false; errors: string[] };
@@ -284,6 +289,7 @@ function cleanIngredient(raw: Ingredient, errors: string[]): Ingredient | null {
       fibre: num(per.fibre) || 0,
     },
     each: raw.unit === "each" ? text(raw.each, 40) || name.toLowerCase() : undefined,
+    containsGluten: raw.containsGluten === true || undefined,
     custom: true,
   };
   if (!ing.id.startsWith(CUSTOM_PREFIX)) errors.push(`${label} has an invalid id`);
@@ -338,6 +344,7 @@ export async function saveRecipe(draft: RecipeDraft): Promise<SaveRecipeResult> 
     steps: lines(draft.steps, 20),
     ...(text(draft.tip, 400) ? { tip: text(draft.tip, 400) } : {}),
     ...(lines(draft.airFryer, 10).length ? { airFryer: lines(draft.airFryer, 10) } : {}),
+    ...(draft.celiacSafe === true ? { celiacSafe: true } : {}),
     custom: true,
   };
 

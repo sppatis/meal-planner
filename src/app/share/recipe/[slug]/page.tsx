@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { CeliacChip } from "@/components/celiac-chip";
 import { NutritionPanel } from "@/components/nutrition-panel";
 import { CATEGORY_LABELS, SERVINGS } from "@/lib/constants";
 import { loadLibrary } from "@/lib/data";
@@ -64,6 +65,11 @@ export default async function ShareRecipePage({ params }: PageProps<"/share/reci
       />
       <article>
         <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Dinner Planner recipe</p>
+        {recipe.celiacSafe && (
+          <p className="mt-3">
+            <CeliacChip size="md" />
+          </p>
+        )}
         <h1 className="mt-1 text-3xl font-bold">{recipe.name}</h1>
         <p className="mt-2 text-stone-600">{recipe.description}</p>
         <p className="mt-3 text-sm text-stone-600">

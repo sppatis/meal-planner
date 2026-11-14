@@ -4,7 +4,7 @@ import { BUILTIN_LIBRARY, type Library } from "./library";
 import { isQuick } from "./nutrition";
 import type { Category, MealSlot, Plan, Recipe, SlotRole } from "./types";
 
-type GeneratorPlan = PlanSpan & Pick<Plan, "weeklyBudget" | "quickDays">;
+type GeneratorPlan = PlanSpan & Pick<Plan, "weeklyBudget" | "quickDays"> & Partial<Pick<Plan, "celiacSafe">>;
 
 /** Recipes can't come back within this many weeks either side. Relaxed if no plan fits. */
 const VARIETY_WINDOWS = [3, 2, 1];
@@ -141,11 +141,11 @@ function generateWeek(week: number, { plan, byDate, prices, rng, library }: Week
     }
   }
   if (cheapest) return cheapest.slots;
-  throw new PlanGenerationError(
-    `Couldn't fit 7 different dinners into week ${week + 1}. Try leaving out fewer ingredients${
-      plan.quickDays.length ? " or choosing fewer quick nights" : ""
-    }.`,
-  );
+  const hints = ["leaving out fewer ingredients"];
+  if (plan.celiacSafe) hints.push("turning off celiac safe only");
+  if (plan.quickDays.length) hints.push("choosing fewer quick nights");
+  const tryWhat = hints.join(", ").replace(/, ([^,]*)$/, " or $1");
+  throw new PlanGenerationError(`Couldn't fit 7 different dinners into week ${week + 1}. Try ${tryWhat}.`);
 }
 
 function tryWeek(

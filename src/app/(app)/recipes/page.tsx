@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CeliacChip } from "@/components/celiac-chip";
 import { RecipeArt } from "@/components/recipe-art";
 import { StarDisplay } from "@/components/stars";
 import { VisibilityButton } from "@/components/visibility-button";
@@ -41,6 +42,11 @@ export default async function RecipesPage() {
               {fav.has(r.slug) && <span className="mr-1 text-rose-500">♥</span>}
               {r.name}
             </p>
+            {r.celiacSafe && (
+              <p className="mt-1">
+                <CeliacChip />
+              </p>
+            )}
             <p className="mt-1 text-xs text-stone-500">
               {r.custom ? `${CATEGORY_LABELS[r.category]} · ` : ""}
               {nutritionPerServing(r, library.ingredients).kcal} kcal · {totalMins(r)} min

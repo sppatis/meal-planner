@@ -45,13 +45,14 @@ async function main() {
   const seedArg = values("seed")[0];
   const seed = seedArg ? Number(seedArg) : weeks.length ? Date.now() : undefined;
 
-  const [existing, customRecipes, customIngredients] = await Promise.all([
+  const [existing, customRecipes, customIngredients, savedRecipes] = await Promise.all([
     hs.getSlots(plan.id),
     store.getCustomRecipes(),
     store.getCustomIngredients(),
+    hs.getSavedRecipes(),
   ]);
   const hidden = await hs.getHiddenRecipes();
-  const library = planLibrary(buildLibrary(customRecipes, customIngredients), plan, hidden, household.allergies);
+  const library = planLibrary(buildLibrary(customRecipes, customIngredients, savedRecipes), plan, hidden, household.allergies);
   const prices = await planPrices(plan, library.ingredients);
   const slotsOut = generatePlan({
     plan,

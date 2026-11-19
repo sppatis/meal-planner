@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ALLERGENS, isAllergen } from "@/lib/allergens";
-import { CATEGORY_LABELS, MAX_PLAN_WEEKS } from "@/lib/constants";
+import { CATEGORY_LABELS, MAX_PLAN_WEEKS, SERVINGS } from "@/lib/constants";
 import { AISLE_ORDER } from "@/lib/cost";
 import { findPlan, loadLibrary, loadPlanList } from "@/lib/data";
 import { mondayOf, parseISO, planDates, weekOf } from "@/lib/dates";
@@ -11,7 +11,7 @@ import { PlanGenerationError } from "@/lib/generator";
 import { buildLibrary, CUSTOM_PREFIX, slugify } from "@/lib/library";
 import { householdStore, requireHousehold } from "@/lib/household";
 import { ensurePlanSlots, generateFullPlan, regenerateWeeks } from "@/lib/plan";
-import { MAX_PEOPLE, MIN_PEOPLE } from "@/lib/scale";
+import { MAX_PEOPLE, MIN_PEOPLE, recipeServings, scaleRecipe, unscaleQty } from "@/lib/scale";
 import { store } from "@/lib/store";
 import { removePhotoFile, savePhotoFile } from "@/lib/store/photo-files";
 import { isStoreId } from "@/lib/stores";
@@ -368,6 +368,7 @@ export async function saveRecipe(draft: RecipeDraft): Promise<SaveRecipeResult> 
     ...(text(draft.tip, 400) ? { tip: text(draft.tip, 400) } : {}),
     ...(lines(draft.airFryer, 10).length ? { airFryer: lines(draft.airFryer, 10) } : {}),
     ...(draft.celiacSafe === true ? { celiacSafe: true } : {}),
+    ...(existing?.note ? { note: existing.note } : {}),
     custom: true,
   };
 
@@ -391,6 +392,91 @@ export async function saveRecipe(draft: RecipeDraft): Promise<SaveRecipeResult> 
   const used = new Set(recipe.ingredients.map((l) => l.id));
   for (const ing of newIngredients) if (used.has(ing.id)) await store.saveCustomIngredient(ing);
   await store.saveCustomRecipe(recipe);
+  refreshAll();
+  return { ok: true, slug: recipe.slug };
+}
+
+const NOTE_MAX = 500;
+const QTY_MAX = 100_000;
+
+function cookNote(value: unknown) {
+  if (typeof value !== "string") return "";
+  return value.replace(/\r\n/g, "\n").trim().slice(0, NOTE_MAX);
+}
+
+function cleanAmount(value: unknown): number | null {
+  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN;
+  if (!Number.isFinite(n) || n <= 0 || n > QTY_MAX) return null;
+  return Math.round(n * 1000) / 1000;
+}
+
+function sameAmount(a: number, b: number) {
+  return Math.abs(a - b) < 1e-6;
+}
+
+/** The recipe written back to the store: base quantities, the cook's note, and the method left as it was. */
+function recipeForStore(recipe: Recipe, ingredients: Recipe["ingredients"], note: string, custom: boolean): Recipe {
+  const next: Recipe = {
+    slug: recipe.slug,
+    name: recipe.name,
+    category: recipe.category,
+    protein: recipe.protein,
+    prepMins: recipe.prepMins,
+    cookMins: recipe.cookMins,
+    description: recipe.description,
+    ingredients,
+    steps: recipe.steps,
+    ...(recipe.tip ? { tip: recipe.tip } : {}),
+    ...(recipe.airFryer?.length ? { airFryer: recipe.airFryer } : {}),
+    ...(custom && recipe.celiacSafe ? { celiacSafe: true } : {}),
+    ...(note ? { note } : {}),
+    ...(custom ? { custom: true } : {}),
+  };
+  return next;
+}
+
+/**
+ * Save ingredient amounts and a note on this recipe.
+ * Amounts are the ones on screen, already scaled to the plan. They are converted back to the
+ * recipe's own servings and written onto its ingredient lines. A built-in keeps its slug and is
+ * stored for this household. A custom recipe is updated in place.
+ */
+export async function saveRecipeAmounts(
+  slug: string,
+  quantities: unknown,
+  note: unknown,
+  planId: string | null,
+): Promise<SaveRecipeResult> {
+  const { hs, active } = await loadPlanList();
+  if (planId !== null && typeof planId !== "string") return { ok: false, errors: ["Unknown plan"] };
+  const plan = planId ? await findPlan(planId) : active;
+  if (planId && !plan) return { ok: false, errors: ["That plan no longer exists"] };
+  const people = plan?.people ?? SERVINGS;
+  if (!(Number.isInteger(people) && people >= MIN_PEOPLE && people <= MAX_PEOPLE)) {
+    return { ok: false, errors: [`The plan can feed ${MIN_PEOPLE} to ${MAX_PEOPLE} people`] };
+  }
+
+  const library = await loadLibrary();
+  const recipe = library.bySlug[slug];
+  if (!recipe) return { ok: false, errors: ["Unknown recipe"] };
+  const entered = Array.isArray(quantities) ? quantities : [];
+  if (entered.length !== recipe.ingredients.length) {
+    return { ok: false, errors: ["This recipe changed. Reload the page and try again."] };
+  }
+  const amounts = entered.map(cleanAmount);
+  if (amounts.some((qty) => qty === null)) {
+    return { ok: false, errors: ["Enter an amount greater than 0 for every ingredient"] };
+  }
+
+  const from = recipeServings(recipe);
+  const shown = scaleRecipe(recipe, people, library.ingredients);
+  const ingredients = recipe.ingredients.map((line, i) => {
+    const qty = amounts[i] as number;
+    return { ...line, qty: sameAmount(qty, shown.ingredients[i].qty) ? line.qty : unscaleQty(qty, people, from) };
+  });
+  const stored = recipeForStore(recipe, ingredients, cookNote(note), recipe.custom === true);
+  if (recipe.custom) await store.saveCustomRecipe(stored);
+  else await hs.saveSavedRecipe(stored);
   refreshAll();
   return { ok: true, slug: recipe.slug };
 }
@@ -434,9 +520,13 @@ export async function deleteRecipe(slug: string) {
   const library = await loadLibrary();
   if (!library.bySlug[slug]?.custom) throw new Error("Only your own recipes can be deleted");
   await store.deleteCustomRecipe(slug);
-  const [recipes, ingredients] = await Promise.all([store.getCustomRecipes(), store.getCustomIngredients()]);
+  const [recipes, ingredients, saved] = await Promise.all([
+    store.getCustomRecipes(),
+    store.getCustomIngredients(),
+    hs.getSavedRecipes(),
+  ]);
   // Other households' plans are repaired the next time they're opened.
-  const remaining = buildLibrary(recipes, ingredients);
+  const remaining = buildLibrary(recipes, ingredients, saved);
   for (const plan of plans) await ensurePlanSlots(hs, plan, remaining);
   refreshAll();
 }

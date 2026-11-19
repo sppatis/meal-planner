@@ -189,6 +189,19 @@ function householdStore(h: string): HouseholdStore {
         await sql`delete from hidden_recipes where household_id = ${h} and recipe_slug = ${recipeSlug}`;
       }
     },
+
+    async getSavedRecipes() {
+      const sql = await getSql();
+      const rows = await sql<{ data: Recipe }[]>`
+        select data from saved_recipes where household_id = ${h} order by slug`;
+      return rows.map((r) => r.data);
+    },
+    async saveSavedRecipe(recipe) {
+      const sql = await getSql();
+      await sql`insert into saved_recipes (household_id, slug, data)
+        values (${h}, ${recipe.slug}, ${sql.json(recipe as never)})
+        on conflict (household_id, slug) do update set data = excluded.data, updated_at = now()`;
+    },
   };
 }
 

@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { NutritionPanel } from "@/components/nutrition-panel";
 import { usesAllergen } from "@/lib/allergens";
 import { CATEGORY_LABELS, SERVINGS } from "@/lib/constants";
-import { loadLibrary } from "@/lib/data";
+import { loadSharedLibrary } from "@/lib/data";
 import { nutritionPerServing } from "@/lib/nutrition";
 import { recipeLines } from "@/lib/recipe-view";
 import { siteUrl } from "@/lib/site";
 import { store } from "@/lib/store";
 
 export async function generateMetadata({ params }: PageProps<"/share/recipe/[slug]">): Promise<Metadata> {
-  const recipe = (await loadLibrary()).bySlug[(await params).slug];
+  const recipe = (await loadSharedLibrary()).bySlug[(await params).slug];
   if (!recipe) return {};
   return {
     title: recipe.name,
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps<"/share/recipe/[slu
 
 export default async function ShareRecipePage({ params }: PageProps<"/share/recipe/[slug]">) {
   const { slug } = await params;
-  const library = await loadLibrary();
+  const library = await loadSharedLibrary();
   const recipe = library.bySlug[slug];
   if (!recipe) notFound();
 

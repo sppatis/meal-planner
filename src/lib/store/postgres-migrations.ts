@@ -139,4 +139,15 @@ export const MIGRATIONS: string[] = [
   `
   alter table meal_slots add column skipped boolean not null default false;
   `,
+
+  // 8: a household's saved copy of a built-in recipe. No row means the catalogue recipe.
+  `
+  create table saved_recipes (
+    household_id text not null references households (id) on delete cascade,
+    slug text not null,
+    data jsonb not null,
+    updated_at timestamptz not null default now(),
+    primary key (household_id, slug)
+  );
+  `,
 ];

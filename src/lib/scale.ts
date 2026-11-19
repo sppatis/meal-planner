@@ -32,3 +32,13 @@ export function scaleRecipe(recipe: Recipe, people: number, ingredients: Ingredi
     }),
   };
 }
+
+/**
+ * A quantity shown for `people` back to a recipe written for `from` servings.
+ * This divides by the factor scaleRecipe multiplied by. Display rounding stays in
+ * scaleRecipe, so saving the amount on screen and opening the same plan shows it again.
+ */
+export function unscaleQty(qty: number, people: number, from: number): number {
+  if (!(from > 0) || people === from) return qty;
+  return Math.round(((qty * from) / people) * 1000) / 1000;
+}

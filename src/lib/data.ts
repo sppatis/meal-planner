@@ -1,7 +1,7 @@
 import "server-only";
 import { connection } from "next/server";
 import { cache } from "react";
-import { requireHousehold } from "./household";
+import { currentHousehold, requireHousehold } from "./household";
 import { SERVINGS } from "./constants";
 import { scaledLibrary } from "./exclusions";
 import { buildLibrary } from "./library";
@@ -19,7 +19,21 @@ export const loadCustom = cache(async () => {
   return { recipes, ingredients };
 });
 
+/** Built-in recipes this household has saved. Empty when nobody is signed in, so public pages stay on the catalogue. */
+export const loadSavedRecipes = cache(async () => {
+  await connection();
+  const household = await currentHousehold();
+  if (!household) return [];
+  return store.forHousehold(household.id).getSavedRecipes();
+});
+
 export const loadLibrary = cache(async () => {
+  const [{ recipes, ingredients }, saved] = await Promise.all([loadCustom(), loadSavedRecipes()]);
+  return buildLibrary(recipes, ingredients, saved);
+});
+
+/** Catalogue and shared custom recipes, without one household's saved built-in edits. */
+export const loadSharedLibrary = cache(async () => {
   const { recipes, ingredients } = await loadCustom();
   return buildLibrary(recipes, ingredients);
 });

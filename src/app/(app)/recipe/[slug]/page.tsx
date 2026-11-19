@@ -3,8 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CATEGORY_STYLE } from "@/components/category-style";
 import { CeliacChip } from "@/components/celiac-chip";
-import { Checklist } from "@/components/checklist";
 import { DeleteRecipeButton } from "@/components/delete-recipe-button";
+import { RecipeShoppingList } from "@/components/recipe-shopping-list";
 import { FavouriteButton } from "@/components/favourite-button";
 import { VisibilityButton } from "@/components/visibility-button";
 import { NutritionPanel } from "@/components/nutrition-panel";
@@ -169,30 +169,28 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
         </aside>
 
         <div className="space-y-8">
-          <section>
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-xl font-bold">Shopping list</h2>
-              <span className="text-xs text-stone-500">
-                For {people} · {shop} pack, est. price
-              </span>
-            </div>
-            <div className="mt-2 rounded-2xl bg-white px-4 ring-1 ring-stone-200">
-              <Checklist
-                storageKey={`recipe-check:${slug}`}
-                items={lines.map((l) => ({
-                  id: l.key,
-                  primary: `${l.qtyText}${l.ingredient.unit === "each" && !l.ingredient.packNoun ? "" : ` ${l.ingredient.name.toLowerCase()}`}`,
-                  secondary: [l.note, `${l.ingredient.packLabel}${l.ingredient.staple ? " · cupboard staple" : ""}`]
-                    .filter(Boolean)
-                    .join(" · "),
-                  meta: gbp(priceOf(l.ingredient, prices)),
-                  href: storeSearchUrl(shopId, l.ingredient),
-                  warning: l.ingredient.checkLabel,
-                }))}
-                linkLabel={shop}
-              />
-            </div>
-          </section>
+          <RecipeShoppingList
+            key={slug}
+            slug={slug}
+            planId={plan?.id ?? null}
+            people={people}
+            shop={shop}
+            note={recipe.note ?? ""}
+            lines={lines.map((l) => ({
+              key: l.key,
+              qty: l.qty,
+              unit: l.ingredient.unit,
+              name: l.ingredient.name,
+              prepNote: l.note,
+              primary: `${l.qtyText}${l.ingredient.unit === "each" && !l.ingredient.packNoun ? "" : ` ${l.ingredient.name.toLowerCase()}`}`,
+              secondary: [l.note, `${l.ingredient.packLabel}${l.ingredient.staple ? " · cupboard staple" : ""}`]
+                .filter(Boolean)
+                .join(" · "),
+              meta: gbp(priceOf(l.ingredient, prices)),
+              href: storeSearchUrl(shopId, l.ingredient),
+              warning: l.ingredient.checkLabel,
+            }))}
+          />
 
           <section>
             <h2 className="text-xl font-bold">Method</h2>

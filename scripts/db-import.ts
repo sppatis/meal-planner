@@ -24,6 +24,7 @@ const DATA_TABLES = [
   "ratings",
   "favourites",
   "hidden_recipes",
+  "saved_recipes",
   "photos",
   "price_overrides",
   "custom_recipes",
@@ -47,7 +48,7 @@ async function main() {
     db.households = db.households.map((h) => (h.id === HOME_HOUSEHOLD ? { ...h, id: target, name: target } : h));
     db.plans = db.plans.map((p) => ({ ...p, householdId: rename(p.householdId) }));
     db.slots = db.slots.map((s) => ({ ...s, householdId: rename(s.householdId) }));
-    for (const key of ["activePlanIds", "ratings", "favourites", "hiddenRecipes"] as const) {
+    for (const key of ["activePlanIds", "ratings", "favourites", "hiddenRecipes", "savedRecipes"] as const) {
       db[key] = Object.fromEntries(Object.entries(db[key]).map(([h, v]) => [rename(h), v])) as never;
     }
   }
@@ -125,6 +126,12 @@ async function main() {
     for (const i of db.customIngredients) {
       await tx`insert into custom_ingredients (id, data) values (${i.id}, ${tx.json(i as never)})`;
     }
+    for (const [householdId, recipes] of Object.entries(db.savedRecipes)) {
+      for (const recipe of recipes) {
+        await tx`insert into saved_recipes (household_id, slug, data)
+          values (${householdId}, ${recipe.slug}, ${tx.json(recipe as never)})`;
+      }
+    }
   });
 
   const count = (o: Record<string, object>) => Object.values(o).reduce((n, v) => n + Object.keys(v).length, 0);
@@ -132,7 +139,8 @@ async function main() {
     `Imported ${db.households.length} households (${db.households.map((h) => h.id).join(", ")}), ` +
       `${db.plans.length} plans, ${db.slots.length} dinners, ${count(db.ratings)} ratings, ` +
       `${count(db.favourites)} favourites, ${count(db.hiddenRecipes)} hidden, ${db.photos.length} photos, ${count(db.prices)} prices, ` +
-      `${db.customRecipes.length} recipes and ${db.customIngredients.length} ingredients of your own.`,
+      `${db.customRecipes.length} recipes and ${db.customIngredients.length} ingredients of your own, ` +
+      `${Object.values(db.savedRecipes).reduce((n, list) => n + list.length, 0)} saved built-in recipes.`,
   );
   const missing = db.photos.filter((p) => !existsSync(path.join(LOCAL_PHOTO_DIR, path.basename(p.url))));
   if (db.photos.length) {

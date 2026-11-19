@@ -46,6 +46,13 @@ export interface HouseholdStore {
   /** Recipe slugs this household has turned off for planning. */
   getHiddenRecipes(): Promise<string[]>;
   setRecipeHidden(recipeSlug: string, hidden: boolean): Promise<void>;
+
+  /**
+   * Built-in recipes this household has saved over the catalogue.
+   * A missing slug still comes from the catalogue. Custom recipes are stored separately and updated in place.
+   */
+  getSavedRecipes(): Promise<Recipe[]>;
+  saveSavedRecipe(recipe: Recipe): Promise<void>;
 }
 
 /** Data shared by every household, plus the households themselves. */
@@ -55,7 +62,7 @@ export interface Store {
   listHouseholds(): Promise<Household[]>;
   getHousehold(id: string): Promise<Household | null>;
   saveHousehold(household: Household): Promise<void>;
-  /** Deletes the household with its plans, dinners, ratings and favourites. */
+  /** Deletes the household with its plans, dinners, ratings, favourites and saved recipes. */
   deleteHousehold(id: string): Promise<void>;
 
   getPhotos(recipeSlug?: string): Promise<Photo[]>;

@@ -102,6 +102,8 @@ export interface Recipe {
   custom?: boolean;
   /** Confirmed to use no gluten-containing ingredient. Never inferred from the recipe name. */
   celiacSafe?: boolean;
+  /** Reminder kept with this dinner, for example "double the sauce next time". */
+  note?: string;
   /** Set when quantities have been scaled from 3 to a plan's number of people. */
   servings?: number;
 }

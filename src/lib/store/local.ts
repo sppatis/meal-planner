@@ -22,6 +22,8 @@ export interface LocalDb {
   favourites: Record<string, string[]>;
   /** Recipe slugs each household has turned off for planning. */
   hiddenRecipes: Record<string, string[]>;
+  /** Built-in recipes a household has saved over the catalogue, by household id. */
+  savedRecipes: Record<string, Recipe[]>;
   photos: Photo[];
   /** Price corrections by supermarket, then ingredient. */
   prices: Record<string, Record<string, number>>;
@@ -38,6 +40,26 @@ function allergiesFor(raw: { allergies?: unknown; id?: string }, plans: { househ
   const id = raw.id ?? HOME_HOUSEHOLD;
   const gluten = plans.some((p) => (p.householdId ?? HOME_HOUSEHOLD) === id && p.celiacSafe === true);
   return gluten ? ["gluten"] : [];
+}
+
+function savedRecipeList(value: unknown): Recipe[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((recipe): recipe is Recipe => {
+    if (!recipe || typeof recipe !== "object") return false;
+    const item = recipe as Recipe;
+    return typeof item.slug === "string" && typeof item.name === "string" && Array.isArray(item.ingredients);
+  });
+}
+
+/** Files from before saved recipes existed have no list, which means every dinner still comes from the catalogue. */
+function savedRecipesFrom(raw: unknown): Record<string, Recipe[]> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, Recipe[]> = {};
+  for (const [id, list] of Object.entries(raw)) {
+    const recipes = savedRecipeList(list);
+    if (recipes.length) out[id] = recipes;
+  }
+  return out;
 }
 
 function toHousehold(raw: Partial<Household> & { id: string }, plans: { householdId?: string; celiacSafe?: boolean }[]): Household {
@@ -84,6 +106,7 @@ export function normaliseLocalDb(raw: any): LocalDb {
     ratings: flatRatings ? { [HOME_HOUSEHOLD]: raw.ratings } : (raw.ratings ?? {}),
     favourites: Array.isArray(raw.favourites) ? { [HOME_HOUSEHOLD]: raw.favourites } : (raw.favourites ?? {}),
     hiddenRecipes: raw.hiddenRecipes ?? {},
+    savedRecipes: savedRecipesFrom(raw.savedRecipes),
     photos: raw.photos ?? [],
     prices: flatPrices ? { tesco: raw.prices } : (raw.prices ?? {}),
     customRecipes: raw.customRecipes ?? [],
@@ -226,6 +249,16 @@ function householdStore(h: string): HouseholdStore {
         db.hiddenRecipes[h] = hidden ? [...list, recipeSlug] : list;
       });
     },
+
+    async getSavedRecipes() {
+      return [...((await read()).savedRecipes[h] ?? [])].sort((a, b) => a.slug.localeCompare(b.slug));
+    },
+    async saveSavedRecipe(recipe) {
+      await update((db) => {
+        const list = (db.savedRecipes[h] ?? []).filter((r) => r.slug !== recipe.slug);
+        db.savedRecipes[h] = [...list, recipe];
+      });
+    },
   };
 }
 
@@ -254,6 +287,7 @@ export const localStore: Store = {
       delete db.ratings[id];
       delete db.favourites[id];
       delete db.hiddenRecipes[id];
+      delete db.savedRecipes[id];
     });
   },
 
